@@ -1,0 +1,74 @@
+{
+  "manifestVersion": "1.0",
+  "verifiedOn": "2026-11-12",
+  "totalOriginalImageBytes": 117326500,
+  "studies": [
+    {
+      "id": "biad610-bt474",
+      "title": "BT474 cell-line-derived spheroid",
+      "record": "https://www.ebi.ac.uk/biostudies/bioimages/studies/S-BIAD610",
+      "metadata": "https://www.ebi.ac.uk/biostudies/api/v1/studies/S-BIAD610",
+      "fileList": "https://www.ebi.ac.uk/biostudies/files/S-BIAD610/File_list.json",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "citation": "D'Imprima E, Mahamid J. Light and electron microscopy continuum-resolution imaging of 3D cell cultures. BioImage Archive S-BIAD610 (2023); https://doi.org/10.1101/2021.07.02.450855.",
+      "instrument": "Zeiss LSM 780 NLO (study record); not Thermo Fisher",
+      "sourceAxes": "ZCYX",
+      "sourceShape": [35, 3, 1024, 1024],
+      "spacingUmZYX": [2.8598338341383296, 0.3321064215101344, 0.3321064215101344],
+      "calibrationSource": "BT474.tif ImageJ unit=micron, spacing=2.8598338341383296; X/YResolution=3011083/1000000 pixels per micron.",
+      "channels": ["Source channel 1", "Source channel 2", "Source channel 3"],
+      "defaultVisibility": [false, true, true],
+      "channelCaution": "The selected TIFF has no per-channel stain labels. LUTs are not stain identities. Channel 1 has high background and is initially hidden for volume clarity; it remains available. We do not infer marker names.",
+      "temporalCaution": "One published stack, not a time series. No drug-response metadata is asserted.",
+      "transform": "Full field; 4x4 XY block mean to 256x256; Z preserved; uint8 intensities retained; TCZYX OME-TIFF and NGFF 0.4 derivatives.",
+      "files": [
+        {
+          "name": "BT474.tif",
+          "url": "https://ftp.ebi.ac.uk/biostudies/fire/S-BIAD/610/S-BIAD610/Files/BT474.tif",
+          "bytes": 110121336,
+          "sha256": "77e14f63355c412233074de25925e7340c69c4bc4fafb5fdb8229c0df5387f61"
+        }
+      ]
+    },
+    {
+      "id": "cpg0000-field",
+      "title": "Cell Painting / one multichannel field",
+      "record": "https://github.com/broadinstitute/cellpainting-gallery",
+      "metadata": "https://github.com/jump-cellpainting/2023_Chandrasekaran_submitted#image-metadata",
+      "imageMetadata": "https://cellpainting-gallery.s3.amazonaws.com/cpg0000-jump-pilot/source_4/images/2020_11_04_CPJUMP1/images/BR00116991__2020-11-05T19_51_35-Measurement1/Images/Index.idx.xml",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "citation": "Chandrasekaran et al. (2024), https://doi.org/10.1038/s41592-024-02241-6; Weisbart et al. (2024), https://doi.org/10.1038/s41592-024-02399-z. Cell Painting Gallery cpg0000-jump-pilot, source_4, plate BR00116991, r01c01f01p01. We thank the AWS Open Data Sponsorship Program for sponsoring data storage.",
+      "instrument": "PerkinElmer Phenix (Index.idx.xml); not Thermo Fisher",
+      "sourceAxes": "CYX",
+      "sourceShape": [3, 1080, 1080],
+      "spacingUmZYX": [1, 0.5979760809567617, 0.5979760809567617],
+      "calibrationSource": "Index.idx.xml ImageResolutionX/Y=5.979760809567617E-07 m. Z=1 is a singleton indexing placeholder; no axial calibration or depth claim.",
+      "channels": ["Hoechst 33342 (ch5)", "Alexa 647 (ch1)", "Alexa 568 (ch2)"],
+      "channelCaution": "Channel labels from primary image metadata. Three of five fluorescence channels selected; brightfield omitted.",
+      "temporalCaution": "Independent fixed endpoint field; no compound assignment, pairing with BT474, or time trajectory inferred.",
+      "transform": "2x2 XY block mean to 540x540; channel order 5,1,2; fixed per-source-channel 1st/99.8th-percentile uint16-to-uint8 mapping, saved in derivative provenance. Display-only, not comparable to synthetic ADU.",
+      "files": [
+        {
+          "name": "cpg-ch5.tiff",
+          "url": "https://cellpainting-gallery.s3.amazonaws.com/cpg0000-jump-pilot/source_4/images/2020_11_04_CPJUMP1/images/BR00116991__2020-11-05T19_51_35-Measurement1/Images/r01c01f01p01-ch5sk1fk1fl1.tiff",
+          "bytes": 2105830,
+          "sha256": "f2d39441ce5b2639bdd498acdd925a12108aeb13a5bad77c8f4f2c8cd308e108"
+        },
+        {
+          "name": "cpg-ch1.tiff",
+          "url": "https://cellpainting-gallery.s3.amazonaws.com/cpg0000-jump-pilot/source_4/images/2020_11_04_CPJUMP1/images/BR00116991__2020-11-05T19_51_35-Measurement1/Images/r01c01f01p01-ch1sk1fk1fl1.tiff",
+          "bytes": 2555730,
+          "sha256": "0aeb11905e4e6ce3b7c9ae481cf0551eafe3e958ac9d3a1c85c7524ed1fe3e08"
+        },
+        {
+          "name": "cpg-ch2.tiff",
+          "url": "https://cellpainting-gallery.s3.amazonaws.com/cpg0000-jump-pilot/source_4/images/2020_11_04_CPJUMP1/images/BR00116991__2020-11-05T19_51_35-Measurement1/Images/r01c01f01p01-ch2sk1fk1fl1.tiff",
+          "bytes": 2543604,
+          "sha256": "0ae5aa09ccfdbcbdaa44cdf464a1e2768c0617a0d942b49aa3d120834e7ea0f5"
+        }
+      ]
+    }
+  ]
+}

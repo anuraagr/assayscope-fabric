@@ -1,0 +1,2 @@
+experiment_id,acquisition_id,plate_id,well,image_id,condition_id,dose_um,replicate,replicate_type,sample_model,metadata_status
+example-experiment,example-acquisition,example-plate,B11,example-stack,example-condition,10,3,technical,example-cell-line-derived-spheroid,EXAMPLE ONLY - not a certified LIMS connector

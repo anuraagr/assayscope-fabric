@@ -1,0 +1,123 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://assayscope.example/contracts/catalog.schema.json",
+  "title": "Catalog",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "experiment", "channels", "runs", "wells", "provenance"],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "experiment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "question", "summary", "assay", "sample", "disclosure", "seed"],
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "question": { "type": "string" },
+        "summary": { "type": "string" },
+        "assay": { "type": "string" },
+        "sample": { "type": "string" },
+        "disclosure": { "type": "string" },
+        "seed": { "type": "integer" }
+      }
+    },
+    "channels": {
+      "type": "array", "minItems": 1, "maxItems": 8,
+      "items": { "$ref": "#/definitions/Channel" }
+    },
+    "runs": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "title": "AcquisitionRun", "type": "object", "additionalProperties": false,
+        "required": ["id", "label", "instrument", "acquiredAt", "synthetic"],
+        "properties": {
+          "id": { "type": "string" },
+          "label": { "type": "string" },
+          "instrument": { "type": "string" },
+          "acquiredAt": { "type": "string" },
+          "synthetic": { "type": "boolean" }
+        }
+      }
+    },
+    "wells": { "type": "array", "minItems": 1, "items": { "$ref": "#/definitions/Well" } },
+    "provenance": {
+      "title": "ProcessingProvenance", "type": "object", "additionalProperties": false,
+      "required": ["generator", "analysis", "codeVersion", "processedAt", "parameters", "citations"],
+      "properties": {
+        "generator": { "type": "string" },
+        "analysis": { "type": "string" },
+        "codeVersion": { "type": "string" },
+        "processedAt": { "type": "string", "format": "date-time" },
+        "parameters": { "type": "object", "additionalProperties": true },
+        "citations": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  },
+  "definitions": {
+    "Channel": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "name", "color", "meaning"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "color": { "type": "string", "pattern": "^#[a-fA-F0-9]{6}$" },
+        "meaning": { "type": "string" }
+      }
+    },
+    "Asset": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "path", "sha256", "axes", "shape", "spacingUm", "timesHours", "bytes", "frameHashes"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-zA-Z0-9_-]+$" },
+        "path": { "type": "string", "pattern": "^[a-zA-Z0-9_./-]+$" },
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "axes": { "const": "TCZYX" },
+        "shape": {
+          "type": "array", "minItems": 5, "maxItems": 5,
+          "items": { "type": "integer", "minimum": 1 }
+        },
+        "spacingUm": {
+          "description": "Physical spacing in Z, Y, X order, micrometers.",
+          "type": "array", "minItems": 3, "maxItems": 3,
+          "items": { "type": "number", "exclusiveMinimum": 0 }
+        },
+        "timesHours": { "type": "array", "minItems": 1, "items": { "type": "number", "minimum": 0 } },
+        "bytes": { "type": "integer", "minimum": 1 },
+        "frameHashes": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^[a-f0-9]{64}$" } }
+      }
+    },
+    "Measurements": {
+      "type": "object", "additionalProperties": false,
+      "required": ["objectCount", "medianAreaUm2", "foregroundAreaUm2", "meanSignalAdu", "integratedSignalAdu", "spheroidVolumeUm3", "focusScore", "saturationFraction", "illuminationCv"],
+      "properties": {
+        "objectCount": { "type": "integer", "minimum": 0 },
+        "medianAreaUm2": { "type": ["number", "null"], "minimum": 0 },
+        "foregroundAreaUm2": { "type": "number", "minimum": 0 },
+        "meanSignalAdu": { "type": ["number", "null"], "minimum": 0 },
+        "integratedSignalAdu": { "type": "number", "minimum": 0 },
+        "spheroidVolumeUm3": { "type": ["number", "null"], "minimum": 0 },
+        "focusScore": { "type": "number", "minimum": 0 },
+        "saturationFraction": { "type": "number", "minimum": 0, "maximum": 1 },
+        "illuminationCv": { "type": "number", "minimum": 0 }
+      }
+    },
+    "Well": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "well", "runId", "compound", "doseUm", "replicate", "control", "measured", "image", "volume", "measurements"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^run[12]-[A-H][0-9]{2}$" },
+        "well": { "type": "string", "pattern": "^[A-H][0-9]{2}$" },
+        "runId": { "type": "string" },
+        "compound": { "type": "string" },
+        "doseUm": { "type": "number", "minimum": 0 },
+        "replicate": { "type": "integer", "minimum": 1 },
+        "control": { "type": "boolean" },
+        "measured": { "type": "boolean" },
+        "image": { "$ref": "#/definitions/Asset" },
+        "volume": { "anyOf": [{ "$ref": "#/definitions/Asset" }, { "type": "null" }] },
+        "measurements": { "anyOf": [{ "$ref": "#/definitions/Measurements" }, { "type": "null" }] }
+      }
+    }
+  }
+}

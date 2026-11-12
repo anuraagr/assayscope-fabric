@@ -1,0 +1,18 @@
+name: assayscope-fabric
+services:
+  showcase:
+    build: .
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - assayscope-data:/data
+    environment:
+      ASSAYSCOPE_DATA: /data
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    restart: unless-stopped
+volumes:
+  assayscope-data:

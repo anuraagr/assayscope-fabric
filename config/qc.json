@@ -1,0 +1,6 @@
+{
+  "focusMin": 0.025,
+  "saturationMax": 0.015,
+  "illuminationMax": 0.55,
+  "objectCountMin": 12
+}

@@ -1,0 +1,18 @@
+{
+  "application": "0.1.0",
+  "analysis": "cpu-baseline-1",
+  "generator": "spheroid-1",
+  "schema": "1.0",
+  "seed": 20261112,
+  "python": "3.12.13",
+  "nodeContainer": "24.22.2",
+  "rayfin": "1.36.2",
+  "vtkJs": "38.0.5",
+  "openSeadragon": "6.1.1",
+  "omeNgff": "0.4",
+  "omeZarr": "0.11.1",
+  "zarr": "2.18.7",
+  "numcodecs": "0.15.1",
+  "referenceCommit": "49be12f4906ac2dcf5cd28aa3efd31a5ace4d2d4",
+  "notes": "Exact JavaScript and Python dependency pins are in package-lock.json and requirements.txt. NGFF 0.4 + Zarr v2 + Blosc zstd is intentional."
+}

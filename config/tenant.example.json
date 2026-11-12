@@ -1,0 +1,15 @@
+{
+  "environment": "research-demo",
+  "subscriptionId": "",
+  "tenantId": "",
+  "workspaceId": "",
+  "capacityId": "",
+  "expectedAccount": "",
+  "lakehouseId": "",
+  "appItemId": "",
+  "fabricAppsEnabledConfirmed": false,
+  "functionsAvailableConfirmed": false,
+  "workspaceContributorConfirmed": false,
+  "storageApplicationReadConfirmed": false,
+  "sqlApplicationReadConfirmed": false
+}

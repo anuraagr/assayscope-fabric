@@ -1,0 +1,153 @@
+{
+  "schemaVersion": "2.0",
+  "functions": [
+    {
+      "functionName": "catalog",
+      "delegateParameters": [
+        {
+          "name": "ctx",
+          "type": "RayfinContext<AppSchema, AudienceType.Sql | AudienceType.Storage>",
+          "optional": false,
+          "hasDefault": false,
+          "position": 0,
+          "isFabricParameter": false
+        }
+      ],
+      "contextAudiences": [
+        "Sql",
+        "Storage"
+      ]
+    },
+    {
+      "functionName": "imageFrame",
+      "delegateParameters": [
+        {
+          "name": "assetId",
+          "type": "string",
+          "optional": false,
+          "hasDefault": false,
+          "position": 0,
+          "isFabricParameter": false
+        },
+        {
+          "name": "time",
+          "type": "number",
+          "optional": false,
+          "hasDefault": false,
+          "position": 1,
+          "isFabricParameter": false
+        },
+        {
+          "name": "labels",
+          "type": "boolean",
+          "optional": false,
+          "hasDefault": false,
+          "position": 2,
+          "isFabricParameter": false
+        },
+        {
+          "name": "ctx",
+          "type": "RayfinContext<AppSchema, AudienceType.Sql | AudienceType.Storage>",
+          "optional": false,
+          "hasDefault": false,
+          "position": 3,
+          "isFabricParameter": false
+        }
+      ],
+      "contextAudiences": [
+        "Sql",
+        "Storage"
+      ]
+    },
+    {
+      "functionName": "analyze",
+      "delegateParameters": [
+        {
+          "name": "optionsJson",
+          "type": "string",
+          "optional": false,
+          "hasDefault": false,
+          "position": 0,
+          "isFabricParameter": false
+        },
+        {
+          "name": "ctx",
+          "type": "RayfinContext<AppSchema, AudienceType.Sql | AudienceType.Storage>",
+          "optional": false,
+          "hasDefault": false,
+          "position": 1,
+          "isFabricParameter": false
+        }
+      ],
+      "contextAudiences": [
+        "Sql",
+        "Storage"
+      ]
+    },
+    {
+      "functionName": "saveReview",
+      "delegateParameters": [
+        {
+          "name": "userId",
+          "type": "string",
+          "optional": false,
+          "hasDefault": false,
+          "position": 0,
+          "isFabricParameter": false
+        },
+        {
+          "name": "wellId",
+          "type": "string",
+          "optional": false,
+          "hasDefault": false,
+          "position": 1,
+          "isFabricParameter": false
+        },
+        {
+          "name": "state",
+          "type": "string",
+          "optional": false,
+          "hasDefault": false,
+          "position": 2,
+          "isFabricParameter": false
+        },
+        {
+          "name": "rationale",
+          "type": "string",
+          "optional": false,
+          "hasDefault": false,
+          "position": 3,
+          "isFabricParameter": false
+        },
+        {
+          "name": "annotation",
+          "type": "string",
+          "optional": false,
+          "hasDefault": false,
+          "position": 4,
+          "isFabricParameter": false
+        },
+        {
+          "name": "expectedVersion",
+          "type": "number",
+          "optional": false,
+          "hasDefault": false,
+          "position": 5,
+          "isFabricParameter": false
+        },
+        {
+          "name": "ctx",
+          "type": "RayfinContext<AppSchema, AudienceType.Sql | AudienceType.Storage>",
+          "optional": false,
+          "hasDefault": false,
+          "position": 6,
+          "isFabricParameter": false
+        }
+      ],
+      "contextAudiences": [
+        "Sql",
+        "Storage"
+      ]
+    }
+  ]
+}
