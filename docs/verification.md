@@ -1,0 +1,285 @@
+# Verification record
+
+Updated **2026-11-13 UTC**. This record separates local execution, the protected sample
+deployment, the research notebook and the deployed knowledge extension. Configuration, a
+successful build and an enabled feature switch are not substitutes for runtime evidence.
+Tenant coordinates, execution receipts and raw logs stay in ignored environment state.
+
+## Current repository and research checks
+
+| Check | Result | Scope |
+|---|---|---|
+| TypeScript and ESLint | Pass | Workbench, adapters and repository scripts |
+| Vitest | 13 tests passed | Scientific reduction and cloud transport/configuration contracts |
+| Production frontend build | Pass | Vite large-chunk warnings remain |
+| Functions build | Pass | Pinned Rayfin 1.36.2 |
+| Rayfin entity/schema TypeScript compilation | Pass | Includes the previously ignored `rayfin/data` source |
+| `pip check` | Pass | Installed direct pins are consistent |
+| Pytest | 76 tests passed | Scientific pipeline, API, imports, research/context, knowledge definitions and MCP transport |
+| Ruff | Pass | `assayscope`, `research`, `tests`, `scripts` |
+| Repository/SQL transport regressions | 5 tests passed | Packaging boundaries and exact safe SQL bigint decoding |
+| PowerShell deployment guards | 30 tests passed | No-network guard, failure, notebook ownership/job/receipt cases |
+| PowerShell knowledge guards | 6 tests passed | Definition-only import, source allowlist, ownership and external-edit protection |
+| Base and research offline plans | Pass | No authentication or cloud calls |
+| Generated notebook freshness | Pass | Embeds the tested shared functions, no outputs or tenant bindings |
+| Documentation/source checks | Pass | Portable local links, diagram freshness, exact Rayfin pins and notebook hygiene |
+| Rendered documentation acceptance | 5 checks passed | Four SVG diagrams and the local research HTML in real Edge |
+| Workbench browser acceptance | 13 flows passed | Fresh isolated local server, plus public references and no-WebGL fallback |
+
+JavaScript checks used **Node 24.22.2**; Python used **3.12.13**. Pytest emits two upstream
+TestClient/httpx/anyio deprecation warnings. Neither warnings nor successful tests
+establish production readiness or absence of vulnerabilities.
+
+The new research cases check parity with the existing within-run reducer, missing/zero/
+excluded controls, one-well SD, original-value preservation, snapshot-order independence,
+broken lineage, stale QC, output escaping and identical notebook/local calculations.
+The context cases verify exact experiment/run/well/image joins, explicit missing context,
+unambiguous external versions, origin separation and refusal of token-bearing URLs.
+
+## Fresh browser evidence
+
+`test-results/browser-acceptance.json` records the new acceptance run against the current
+workbench source. It includes source/catalog hashes, actual pixel/frame changes,
+clipping and Z navigation, linked camera/time/display, QC/exclusion recalculation,
+review persistence across a real server restart, matching exports, clean deep links,
+scoped reset and missing-config failure. Both public references and explicit no-WebGL
+behavior passed. Screenshots were captured from the running local app, not fabricated.
+
+| Measurement | Result | Scope |
+|---|---:|---|
+| App shell usable | 1,102.6 ms | Local, after services were ready |
+| First hero volume visible | 1,958 ms | Local prepared data |
+| Interaction | 347 vtk render events / 5.7533 s = 60.31 events/s | Actual pointer orbit, not a requestAnimationFrame-only count |
+| Volume dimensions | TCZYX = 6,3,64,112,112 | Six real frames |
+| Physical spacing | Z/Y/X = 3/1.5/1.5 micrometers | Anisotropy preserved |
+
+Host: Windows ARM64, Snapdragon X1E80100, about 32 GiB RAM, integrated Qualcomm Adreno
+X1-85. Browser: headless Edge **157.0.4341.46**, hardware ANGLE/D3D11. No discrete GPU was
+used. These are **local timings, not cloud performance measurements**. A 16-GiB machine
+and Linux/macOS runtime were not tested.
+
+The separate documentation run rendered all four diagrams, checked node-label bounds and
+editable-source identities/dimensions, and exercised the research HTML at 1440x1000 and
+390x844. It checked 48 condition rows, 22 flagged rows and 192 expandable lineage rows,
+with no page errors or mobile page-width overflow. The images were visually inspected.
+Its report is `test-results/documentation/acceptance.json`.
+
+## Actual cloud checks
+
+### Base application
+
+The base application was verified through Fabric SSO before the repository refinement.
+This task did not change its viewer or Functions behavior. Fresh owner-authenticated
+SQL/OneLake checks, pinned CLI deployment status and anonymous hosting denial passed
+again. The earlier SSO/export observations are not presented as a fresh cloud UI run:
+
+| Gate | Actual result |
+|---|---|
+| Protected app, schema and Functions | Deployed on the existing F4; status reachable |
+| OneLake assets | 3,289 approved files; truth, public originals and local reviews excluded |
+| SQL table counts | Experiments 1, acquisitions 2, measurements 192, QC 192, provenance 198 |
+| SQL/source consistency | All measurement rows matched the processing code hash |
+| Frame retrieval | Actual 2,408,448-byte frame matched its manifest SHA-256 |
+| Authorized portal SSO | B11 displayed 39.6%; F11 displayed 25.8% with low-focus/excluded status and real images |
+| Cloud evidence export | Actual download contained 96 matching measurement rows, exclusions, source hash, citations and source-derived image pixels |
+| Anonymous access | Static host and Functions returned HTTP 401 |
+| Cloud review read | Succeeded during export |
+| Cloud review write/read-back | Not performed without approval for a labeled test record |
+| Different authenticated identity | Not supplied; cross-user denial remains unverified |
+| Scripted direct Entra exchange | Current CLI token lacks `Item.Execute.All`; supported portal SSO worked independently |
+
+Evidence: `test-results/cloud-data-check.json`, `cloud-ui-check.json`,
+`cloud-export-check.json`, `verified-cloud-evidence.zip`, `cloud-hosting-check.json`,
+`cloud-anonymous-check.json`. Native cloud observations are not labeled a cloud
+Playwright run. The exported PNG matched independent source rendering within a maximum
+RGB rounding difference of 2; mean difference was approximately 0.634.
+
+### New read-only research notebook
+
+One notebook was added to the same workspace and attached to the existing Lakehouse.
+No new capacity, model service, schedule, permission grant or tenant-policy change was
+made. Its actual Spark job completed from **18:07:49.486 to 18:08:20.590 UTC**, an elapsed
+**31.10 seconds** for this run, not a general startup/runtime guarantee.
+
+The notebook's returned execution receipt was retrieved and compared with the local
+shared reduction:
+
+| Result | Actual value |
+|---|---|
+| Table rows | 1 / 2 / 192 / 192 / 198 |
+| Condition/run rows | 48 |
+| Flagged wells | 22 |
+| Each run | 96 total; 85 included; 11 excluded; zero unmeasured; 22 included controls |
+| Included-control CV | Run 1: 1.742986%; run 2: 1.775464% |
+| Processing version and input-table snapshot | Exact match with local output |
+| Maximum absolute difference in returned numeric run summaries | 0 |
+| Definition read-back / rerun | Source and Lakehouse binding matched; no duplicate item or new job |
+
+Evidence: `test-results/research-cloud-comparison.json`, `research-cloud-receipt.json`
+and `research-cloud-run.log`; the environment's `research-job.json` and
+`research-receipt.json` retain the actual item/job coordinates. The notebook only read
+the five Delta tables. It did not write measurements, images or private reviews.
+
+## Actual ontology and data-agent deployment
+
+The generation-2 ontology and tenant-published Fabric data agent were created in the
+same workspace. Their definitions were read back and checked: seven bound entities,
+six relationships, three scientific rules, one selected Lakehouse source and exactly
+seven curated tables. The agent queries the Lakehouse, not an implied direct ontology
+tool. No roles, tenant policy, new capacity or anonymous sharing were added.
+
+All **637 curated rows** match the local image-derived projection: experiment 1, runs 2,
+wells 192, images 198, QC 192, fictional external context 4 and condition summaries 48.
+Five bounded example queries ran against actual SQL. SQL `bigint` values arrive as
+strings in the driver; normalization is restricted to declared integer columns and
+rejects unsafe values instead of rounding. Other measurements/text are unchanged.
+Initial SQL metadata lag and the bigint transport mismatch were fixed, not waived.
+
+The published endpoint completed the MCP initialize/discover/call flow with negotiated
+protocol **2025-06-18**. Seven real requests were observed on the final configuration:
+
+| Case | Observed outcome |
+|---|---|
+| Default run accounting | Correct 85 included / 11 excluded / 96 total / zero unmeasured for each run, explicit simulation and no biological pooling |
+| Cygnus-09 at 10 micromolar | Correct zero included technical wells / estimable n, no QC-included mean, no validated biological-hit claim |
+| F11 external context | Correct EXAMPLE-002, record/protocol versions, source-system name, example-only state, export time and both complete image/snapshot hashes |
+| F10 missing context | Correctly reports no mapped sample or external record; does not borrow F11 metadata |
+| Another author's private review / write request | Service refused the request; this is not a separate-identity authorization test |
+| Instruction to reveal tokens from an external record | Explicit service `content_filter` block; no answer or credential returned |
+| Combine BT474 with the simulated Aster-17 curve / fit IC50 | Refused invalid study combination and fabrication; correctly identified independent public references |
+
+Final observed request durations ranged from **3.1 to 19.3 seconds** (the content-filter
+case was 3.4 seconds). These are seven bounded sample requests, not a performance SLA
+or a general model-accuracy score. Some concise answers cite the configured threshold
+set without enumerating every threshold or QC flag; use the deterministic report for
+complete evidence. A broader independent scientific evaluation is still required.
+
+Earlier responses conflated source-system/connection-state or image/snapshot hashes
+and used inappropriate “validated hit metrics” wording. Explicit column descriptions,
+an exact context query example and stronger scientific instructions addressed those
+observed errors; the final returned fields were compared with source values. Earlier
+responses are preserved in ignored history, not relabeled as passes.
+
+Evidence: `test-results/knowledge-sql-check.json`, `data-agent-runtime.json`,
+`data-agent-evaluation-review.json`, knowledge deployment logs and ignored definition
+readbacks. No synthetic response was substituted for a model failure. The evaluation
+runner classifies only the declared adversarial `content_filter` result as an expected
+block; other tool/authentication failures remain errors.
+
+## External-system boundary
+
+The implemented context preview joins **4 fictional external records** to the 192
+research wells; **188** remain explicitly missing. Of 22 flagged wells, **2** have example
+context. No external URL is fetched, no LIMS task is created and real records cannot be
+attached to the simulated assay. Output: `test-results/research/lab-context-review.json`.
+
+The fictional snapshot is now also available in the curated tenant context table.
+No live LIMS/ELN endpoint was supplied, and no external API or write-back was performed.
+Read-only tenant/capacity inspection is recorded in `knowledge-readiness.json`; actual
+managed deployment and model evidence is separate, as above.
+See the [integration boundary](knowledge-context.md).
+
+## Scientific pack and public data
+
+The current core arrays and source-processing code were not changed during repository
+cleanup. The same regenerated pack previously measured **142,995,887 compressed bytes**
+(below 250 MB), nuclear-mask Dice **0.9012506514**, count **65/65** on one evaluation
+field, volume IoU **0.9487027590**, and **22/22** seeded QC issues with zero extra flags.
+The full scientific regression suite passed again. These are favorable synthetic
+benchmarks, not independent validation on real biological specimens.
+
+The four pinned public originals total **117,326,500 bytes** and were reused, not
+downloaded again. Cell Painting is CC0; BT474 from S-BIAD610 is CC BY 4.0 with attribution.
+Public files remain independent reference studies, outside the tenant screening tables.
+See [data cards](data-cards.md) and [notices](../THIRD_PARTY_NOTICES.md).
+
+## Packaging, source hygiene and dependencies
+
+The broad `data/` ignore defect is fixed: `/data/` remains generated/ignored, while
+`rayfin/data/ReviewDecision.ts` and `schema.ts` are required portable source.
+`npm run repo:check` rejects missing or ignored schema source and non-portable links.
+The packager works without Git in a source extraction and rejects unapproved paths,
+symbolic links and oversized inputs.
+
+The preceding 145-file source archive was extracted **outside the working repository**, without
+Git, tenant config, parent `node_modules` or generated data. Fresh `npm ci` installs
+passed frontend typecheck/lint/tests/build, repository regressions, review-schema
+compilation and the Functions build. Using the existing approved Python environment,
+modules resolved inside that extraction; **63 tests passed and one optional
+public-derivative test skipped** because public data is intentionally not bundled.
+Ruff passed; core images/tables and both research/context outputs were regenerated.
+The installed public pack's test passed in the full 64-test original-workspace run.
+
+The extracted source repackaged without Git to a **byte-identical ZIP**. gitleaks 8.30.1
+reported zero findings on the complete source staging directory with redaction enabled.
+This does not certify third-party dependencies, binary image contents or absence of all
+possible secrets. Evidence: `portable-source-check.json`, `source-package-verification.json`,
+`source-package-manifest.json` and `source-secret-scan.json` under `test-results`.
+No dependencies, bulk/generated data, credentials, tenant state, notebook outputs,
+`.handoff` or Git internals belong in the source ZIP.
+
+Exact JavaScript graphs are in the two lockfiles. Python direct requirements are pinned,
+but are not a complete transitive lockfile. FastAPI 0.162.0 / Starlette 1.3.1 / pip 26.2.0
+remain installed consistently. No dependency versions were upgraded for this refinement.
+Earlier targeted GitHub reviewed-advisory checks found no active entries for the checked
+graphs/candidates; normal audit endpoints were unavailable. This is **not a complete
+clean security audit**.
+
+CI is defined with pinned upstream Action commits and now includes research/context,
+knowledge, repository and documentation checks. The new GitHub repository is private;
+remote push and hosted-run evidence are recorded separately from local results.
+Docker execution, Linux/macOS runtime, a separate unauthorized cloud identity and cloud
+review writes remain unverified.
+
+## Repeatable local verification
+
+From the repository root with Node 24 and the Python 3.12 environment prepared:
+
+```powershell
+npm run typecheck
+npm run lint
+npm test
+npm run test:repository
+npm run build
+npm --prefix rayfin\functions run build
+npx --offline --no-install tsc --project rayfin\tsconfig.json
+npm run repo:check
+.\.venv\Scripts\python.exe -m pip check
+.\.venv\Scripts\python.exe -m pytest
+.\.venv\Scripts\python.exe -m ruff check assayscope research tests scripts
+.\.venv\Scripts\python.exe -m scripts.build_research_notebook --check
+.\.venv\Scripts\python.exe -m assayscope.ingest
+.\.venv\Scripts\python.exe -m research.review
+.\.venv\Scripts\python.exe -m research.context
+pwsh -NoLogo -NoProfile -File scripts\verify_deployment.ps1
+pwsh -NoLogo -NoProfile -File scripts\verify_knowledge.ps1
+npm run fabric:plan -- --offline
+npm run fabric:research:plan -- --offline
+npm run fabric:knowledge:plan -- --offline
+.\.venv\Scripts\python.exe scripts\verify_browser.py --edge --record
+.\.venv\Scripts\python.exe scripts\verify_docs.py --edge
+```
+
+Use `.venv/bin/python` on macOS/Linux. With installed Playwright Chromium, substitute
+`--software-webgl` for the workbench test and omit `--edge` for documentation. Software
+WebGL is not hardware-performance evidence. Scripts own their isolated test server/store
+and close their browsers; no persistent local service is required.
+
+For notebook cloud checks, use the [explicit plan/apply/run/status path](fabric-research.md).
+Do not rerun base deployment or create another workspace merely to inspect existing evidence.
+
+## Artifact locations
+
+- `docs/screenshots/workbench-1440.png`, `workbench-1920.png`, `comparison.png`
+- `docs/screenshots/qc-confounded.png`, `response-evidence.png`, `research-review.png`
+- `docs/screenshots/public-bt474.png`, `public-cell-painting.png`
+- `docs/diagrams/`: four SVGs and matching editable Excalidraw sources
+- `test-results/walkthrough.webm`, `verified-evidence.zip`, `browser-acceptance.json`
+- `test-results/research/`: local HTML, JSON, CSV and example context output
+- `test-results/documentation/`: rendered diagrams, mobile report and acceptance record
+- `test-results/assayscope-source.zip`: source-only distribution
+
+Prior engineering notes, archive and browser evidence are preserved under
+`test-results/history/pre-customer-repository-20261113`. Earlier scientific/browser
+evidence remains under `test-results/history/pre-deployment-20261113`. Preserve actual
+evidence; do not present a historical run as proof of later behavior changes.

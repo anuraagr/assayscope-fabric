@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { flags, summarizeRows, validateOptions } from '../rayfin/functions/src/analysis';
 import type { MeasurementRow } from '../rayfin/functions/src/analysis';
+import { readCloudAnalysis } from './fabric';
 
 const options = () => validateOptions(JSON.stringify({
   runId: 'run1', excludeQC: true,
@@ -12,6 +13,14 @@ const row = (id: string, value: number, control = false): MeasurementRow => ({
   objectCount: 65, integratedSignalAdu: value, focusScore: .17, saturationFraction: 0, illuminationCv: .01,
 });
 describe('Fabric analytical reduction', () => {
+  it('accepts both SDK-decoded objects and JSON string function outputs without parsing objects again', () => {
+    const result = summarizeRows([row('control', 100, true), row('A01', 40)], options());
+    expect(readCloudAnalysis(result)).toEqual(result);
+    expect(readCloudAnalysis(JSON.stringify(result))).toEqual(result);
+    expect(() => readCloudAnalysis({ ...result, controlN: 'not measured' })).toThrow('invalid result');
+    expect(() => readCloudAnalysis({ ...result, groups: [{ ...result.groups[0], n: 9 }] })).toThrow('invalid result');
+    expect(() => readCloudAnalysis(null)).toThrow('invalid result');
+  });
   it('normalizes each technical well, preserves exclusions and uses sample SD', () => {
     const rows = [row('control1', 90, true), row('control2', 110, true),
       row('A01', 30), row('A02', 40), row('A03', 50), { ...row('F11', 10), focusScore: .007 }];

@@ -1,0 +1,39 @@
+name: Reproducible bug
+description: Report a source, scientific calculation, viewer or deployment failure using non-sensitive evidence.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: "Use synthetic data. Do not include credentials, tenant coordinates, customer images or private reviews. Report vulnerabilities through SECURITY.md."
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment and mode
+      description: Source revision, OS, Node/Python/browser versions, and local simulated / public reference / connected mode.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Exact commands or UI steps, preferably with the supplied synthetic pack.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Redacted evidence
+      description: Errors and relevant test output. Review screenshots and URLs before attaching.
+  - type: checkboxes
+    id: boundaries
+    attributes:
+      label: Data handling
+      options:
+        - label: I have removed credentials, tenant state, customer data and private annotations.
+          required: true

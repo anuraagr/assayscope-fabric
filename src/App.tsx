@@ -22,12 +22,12 @@ const TAB_ITEMS = [
   { id: 'provenance', title: 'Provenance', icon: Fingerprint },
 ] as const;
 const TOUR = [
-  { title: 'Start with the scientific question', body: 'A lower reporter signal may be interesting. The question is whether it survives quality review. All compounds, images and acquisition metadata in this screen are simulated.', well: 'B11', tab: 'workbench' as Tab },
-  { title: 'Look inside a real volume', body: 'Move the cutaway and Z controls. Toggle a fluorescence channel. The orthogonal sections and 3D rendering come from the same voxel array.', well: 'B11', tab: 'workbench' as Tab },
-  { title: 'Follow time, not a rotating object', body: 'Play six actual volumetric timepoints. Compare the matched vehicle with linked display settings. These are simulated timepoints, not a clinical outcome.', well: 'B11', tab: 'workbench' as Tab },
-  { title: 'An apparent hit has a problem', body: 'Cygnus-09 has a low reporter signal and image-derived low-focus flags. The flag is evidence for repeating acquisition, not proof of a biological response.', well: 'F11', tab: 'workbench' as Tab },
-  { title: 'Make exclusions visible', body: 'Toggle QC exclusions and inspect which replicate points disappear. Technical replicates are wells, not cells or timepoints. No IC50 is asserted.', well: 'F11', tab: 'response' as Tab },
-  { title: 'Leave an evidence trail', body: 'Save a rationale and an annotation. Export the measurements, selected image, exclusions and provenance together. A shared link restores the view, not access rights.', well: 'B11', tab: 'provenance' as Tab },
+  { title: 'Experiment design', body: 'Review reporter measurements and acquisition quality across two runs. Compounds, images and acquisition metadata in this screen are simulated.', well: 'B11', tab: 'workbench' as Tab },
+  { title: 'Volume and sections', body: 'Adjust the cutaway, Z section and channel visibility. Orthogonal sections and the 3D rendering use the same voxel array.', well: 'B11', tab: 'workbench' as Tab },
+  { title: 'Timepoints and control comparison', body: 'Inspect six simulated volumetric timepoints. Compare the vehicle control using synchronized time, camera and display settings.', well: 'B11', tab: 'workbench' as Tab },
+  { title: 'Acquisition QC', body: 'Cygnus-09 has a low reporter signal and a low-focus flag. Review the source field before interpreting the signal change as a biological response.', well: 'F11', tab: 'workbench' as Tab },
+  { title: 'QC exclusions', body: 'Toggle exclusions and inspect the included wells and control denominator. Replicates are technical wells, not cells or timepoints. No IC50 is estimated.', well: 'F11', tab: 'response' as Tab },
+  { title: 'Review and export', body: 'Save a rationale and annotation. Export measurements, the selected image, exclusions and provenance. Shared links restore view settings without granting access.', well: 'B11', tab: 'provenance' as Tab },
 ];
 
 function FabricGate({ onReady }: { onReady: (adapter: DataAdapter) => void }) {
@@ -49,7 +49,7 @@ function FabricGate({ onReady }: { onReady: (adapter: DataAdapter) => void }) {
   return <section className="connection-gate" aria-label="Fabric connection">
     <LockKeyhole size={36} /><span className="eyebrow">TENANT DATA / AUTHORIZATION REQUIRED</span>
     <h1>Not connected to Fabric.</h1>
-    <p>{error || 'The app and its image data stay in your organization. Sign in with an authorized Fabric identity.'}</p>
+    <p>{error || 'Sign in with an identity authorized to access the configured Fabric app and dataset.'}</p>
     <p className="subtle">Local fixtures are never used as a fallback for connected mode.</p>
     {session && <button className="primary" disabled={busy} onClick={() => {
       // Sign-in starts synchronously in this user gesture so the browser permits the popup.
@@ -211,7 +211,7 @@ export default function App() {
     <a className="skip-link" href="#main">Skip to microscopy workbench</a>
     <header className="app-header">
       <a className="wordmark" href={window.location.pathname} aria-label="AssayScope home"><span className="brand-symbol"><i /><i /><i /></span>
-        <span>Assay<span>Scope</span><small>FROM MICROSCOPY TO SCIENTIFIC DECISIONS</small></span></a>
+        <span>Assay<span>Scope</span><small>MICROSCOPY REVIEW</small></span></a>
       <div className="header-divider" />
       <label className="mode-selector"><span className={`status-dot ${state.mode === 'connected' && !adapter ? 'offline' : ''}`} />
         <span className="sr-only">Data experience</span>
@@ -237,9 +237,9 @@ export default function App() {
       </nav>
       <section className="question-banner">
         <div><span className="eyebrow">{publicMode ? 'PUBLIC REFERENCE / NOT PART OF THE SCREEN' : 'THE RESEARCH QUESTION'}</span>
-          <h1>{publicMode ? 'Real microscopy. Its own context.' : catalog?.experiment.question ?? 'Preparing your microscopy experiment…'}</h1>
-          <p>{publicMode ? 'Independent studies, preserved attribution. No paired samples, invented treatments or implied live-cell timelines.'
-            : 'A reproducible-looking response and an apparent hit with a quality problem. Inspect the evidence before deciding what to repeat.'}</p></div>
+          <h1>{publicMode ? 'Public microscopy datasets' : catalog?.experiment.question ?? 'Loading experiment…'}</h1>
+          <p>{publicMode ? 'Independent endpoint studies with source metadata, attribution and preprocessing records. No paired samples or treatment assignments.'
+            : 'Compare image-derived reporter measurements, technical replicates and acquisition QC across two simulated runs.'}</p></div>
         {!publicMode && catalog && <label className="run-select"><span>ACQUISITION RUN</span><select aria-label="Acquisition run" value={state.run}
           onChange={e => update({ run: e.target.value, time: 0 })}>{catalog.runs.map(r => <option key={r.id} value={r.id}>{r.label} · {r.instrument}</option>)}</select></label>}
       </section>
@@ -248,7 +248,7 @@ export default function App() {
       {share && <div className="share-panel"><label>View link<input aria-label="Shareable view link" readOnly value={share} onFocus={e => e.target.select()} /></label>
         <small>Only app state is shared. Recipients need this local app or authorized tenant access and the same dataset.</small></div>}
       {publicMode ? <main id="main" className="public-layout">
-        <aside className="study-panel"><span className="eyebrow">REFERENCE LIBRARY</span><h2>Small files.<br />Real science.</h2>
+        <aside className="study-panel"><span className="eyebrow">REFERENCE LIBRARY</span><h2>Available datasets</h2>
           <p className="subtle">A cell-painting field and a cell-line-derived spheroid. They are independent studies.</p>
           {publicIndex?.studies.map(s => <button className={`reference-pick ${s.id === studyId ? 'selected' : ''}`} key={s.id}
             onClick={() => { setStudyId(s.id); update({ time: 0, z: Math.floor(s.asset.shape[2] / 2), view: s.asset.shape[2] > 1 ? 'volume' : 'image', channels: null }); }}>
@@ -267,9 +267,9 @@ export default function App() {
             hasVolume={asset.shape[2] > 1} reference defaults={defaultChannels} resetToken={resetToken} />}</div>
             <aside className="evidence-panel public-evidence"><span className="eyebrow">SOURCE / ATTRIBUTION</span><h2>{study.license}</h2><p>{study.citation}</p>
               <a href={study.sourceUrl} target="_blank" rel="noreferrer">Primary dataset record <ExternalLink size={14} /></a>
-              <h3>Derivative, not raw acquisition</h3><ul>{study.transformations.map(t => <li key={t}>{t}</li>)}</ul>
-              <h3>Source trace</h3><p className="hash">{study.asset.sha256}</p>
-              <p>No response curve, biological pairing, diagnosis or instrument endorsement is inferred.</p></aside></>}
+              <h3>Image preprocessing</h3><ul>{study.transformations.map(t => <li key={t}>{t}</li>)}</ul>
+              <h3>Derivative SHA-256</h3><p className="hash">{study.asset.sha256}</p>
+              <p>Reference images are not included in the screening response analysis.</p></aside></>}
       </main> : !catalog || !well || !adapter ? <main id="main" className="empty-state">
         {error ? <><CircleHelp size={32} /><h2>Experiment unavailable</h2><p>Resolve the error above, then reload. No fabricated results are shown.</p></>
           : <><LoaderCircle className="loading-icon" size={32} /><h2>Preparing source images and analysis</h2><p>The first start generates a bounded synthetic pack on CPU. Subsequent starts reuse it.</p></>}
@@ -300,9 +300,9 @@ export default function App() {
           {tab === 'quality' && analysis && <QualityPanel analysis={analysis} catalog={catalog} run={state.run} onSelect={selectWell} />}
           {tab === 'provenance' && <ProvenancePanel catalog={catalog} well={well} />}
           {(tab === 'response' || tab === 'quality') && !analysis && <div className="empty-state" role="status">Recalculating the evidence…</div>}
-          {tab === 'workbench' && <div className="takeaway"><span><Check size={17} />THE SCIENTIFIC TAKEAWAY</span>
-            <p>{analysis?.flags[well.id]?.length ? 'A lower signal is not enough. This acquisition needs review before its apparent response is trusted.'
-              : 'The observed response can motivate a confirmatory experiment. Passing acquisition checks is not biological validation.'}</p></div>}
+          {tab === 'workbench' && <div className="takeaway"><span><Check size={17} />INTERPRETATION LIMITS</span>
+            <p>{analysis?.flags[well.id]?.length ? 'This acquisition exceeds a configured QC threshold. Review the source images before interpreting the reporter measurement.'
+              : 'No configured acquisition threshold is exceeded. Biological interpretation requires independent replication and orthogonal assays.'}</p></div>}
         </div>
         <Evidence well={well} analysis={analysis} adapter={adapter} resetToken={resetToken} catalog={catalog} />
       </main>}
@@ -328,6 +328,6 @@ export default function App() {
       </section>
     </div>}
     <footer className="app-footer"><span>AssayScope · research demonstration</span><span>No clinical, diagnostic, GxP or efficacy claims.</span>
-      <span>{adapter?.kind === 'fabric' ? 'Tenant-owned data · authorized access' : 'Local showcase · no cloud required'}</span></footer>
+      <span>{adapter?.kind === 'fabric' ? 'Tenant-owned data · authorized access' : 'Local instance · no sign-in'}</span></footer>
   </div>;
 }

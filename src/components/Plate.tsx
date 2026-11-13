@@ -21,7 +21,7 @@ export function Plate({ catalog, run, selected, analysis, onSelect, onCollapse }
     <div className="panel-title"><span>EXPERIMENT / 001</span>
       <button className="icon-button" aria-label="Collapse experiment navigation" onClick={onCollapse}><ChevronLeft size={17} /></button>
     </div>
-    <div className="study-heading"><FlaskConical size={22} /><h2>Spheroid response<br />&amp; reproducibility</h2></div>
+    <div className="study-heading"><FlaskConical size={22} /><h2>Spheroid screen</h2></div>
     <div className="study-meta"><span>96-well plate</span><span>48 h endpoint</span></div>
     <p className="subtle">Three fictional compounds. Eight concentrations. Three technical replicate wells per dose.</p>
     <label className="field-label">Plate color
@@ -64,10 +64,10 @@ export function Plate({ catalog, run, selected, analysis, onSelect, onCollapse }
       </select></label></div>
       <p className="microcopy">Filters dim the plate; they do not silently change the analysis cohort.</p>
     </details>
-    <div className="story-picks"><span className="eyebrow">FOLLOW THE EVIDENCE</span>
-      <button onClick={() => onSelect('B11')}><span className="pick-code">B11</span><span>Aster-17<small>A response to investigate</small></span><b>↗</b></button>
-      <button onClick={() => onSelect('F11')}><span className="pick-code warn">F11</span><span>Cygnus-09<small>A signal with a quality flag</small></span><b>↗</b></button>
-      <button onClick={() => onSelect('G01')}><span className="pick-code">G01</span><span>Vehicle control<small>The reference, not a treatment</small></span><b>↗</b></button>
+    <div className="story-picks"><span className="eyebrow">WELL SHORTCUTS</span>
+      <button onClick={() => onSelect('B11')}><span className="pick-code">B11</span><span>Aster-17<small>10 µM treatment</small></span><b>↗</b></button>
+      <button onClick={() => onSelect('F11')}><span className="pick-code warn">F11</span><span>Cygnus-09<small>10 µM treatment</small></span><b>↗</b></button>
+      <button onClick={() => onSelect('G01')}><span className="pick-code">G01</span><span>Vehicle control<small>Matched control acquisition</small></span><b>↗</b></button>
     </div>
     <div className="local-note"><span className="status-dot" />Synthetic source images preserved<br /><small>Seed {catalog.experiment.seed} · two simulated runs</small></div>
   </aside>;

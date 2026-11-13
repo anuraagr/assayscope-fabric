@@ -91,9 +91,9 @@ export function Evidence({ well, analysis, adapter, resetToken, catalog }: {
         {REVIEW_STATES.map(s => <option key={s}>{s}</option>)}
       </select></label>
       <label className="field-label">Rationale<textarea aria-label="Decision rationale" value={rationale}
-        maxLength={4000} onChange={e => setRationale(e.target.value)} placeholder="What supports your next experiment?" rows={3} /></label>
+        maxLength={4000} onChange={e => setRationale(e.target.value)} placeholder="Record the evidence and reason for this decision" rows={3} /></label>
       <label className="field-label">Image annotation<textarea aria-label="Image annotation" value={annotation}
-        maxLength={4000} onChange={e => setAnnotation(e.target.value)} placeholder="An observation to preserve with this well" rows={2} /></label>
+        maxLength={4000} onChange={e => setAnnotation(e.target.value)} placeholder="Record an observation about this image" rows={2} /></label>
       <button className="primary full" disabled={pending || !rationale.trim()} onClick={save}><Save size={14} />{pending ? 'Loading review…' : 'Save review'}</button>
       {notice && <p className="success-text" role="status">{notice}</p>}
       {error && <p className="error-text" role="alert">{error}</p>}

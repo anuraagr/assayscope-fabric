@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "1.0",
+  "origin": "simulated",
+  "connectionState": "example-only",
+  "sourceSystem": "Example LIMS export",
+  "exportedAt": "2026-10-14T12:00:00Z",
+  "sourceRights": "Original fictional metadata for the AssayScope simulation. No external system was contacted.",
+  "records": [
+    {
+      "externalRecordId": "EXAMPLE-001", "recordVersion": "1",
+      "sampleId": "SIM-SAMPLE-A", "batchId": "SIM-BATCH-01",
+      "protocolId": "SIM-HCS-01", "protocolVersion": "1",
+      "experimentId": "spheroid-screen-001", "runId": "run1",
+      "wellId": "run1-B11", "sourceImageId": "run1-B11", "replicateType": "technical",
+      "updatedAt": "2026-10-13T10:00:00Z", "recordUrl": "https://lims.example.invalid/records/EXAMPLE-001"
+    },
+    {
+      "externalRecordId": "EXAMPLE-002", "recordVersion": "1",
+      "sampleId": "SIM-SAMPLE-C", "batchId": "SIM-BATCH-01",
+      "protocolId": "SIM-HCS-01", "protocolVersion": "1",
+      "experimentId": "spheroid-screen-001", "runId": "run1",
+      "wellId": "run1-F11", "sourceImageId": "run1-F11", "replicateType": "technical",
+      "updatedAt": "2026-10-13T10:00:00Z", "recordUrl": "https://lims.example.invalid/records/EXAMPLE-002"
+    },
+    {
+      "externalRecordId": "EXAMPLE-003", "recordVersion": "1",
+      "sampleId": "SIM-VEHICLE-A", "batchId": "SIM-BATCH-01",
+      "protocolId": "SIM-HCS-01", "protocolVersion": "1",
+      "experimentId": "spheroid-screen-001", "runId": "run1",
+      "wellId": "run1-G01", "sourceImageId": "run1-G01", "replicateType": "technical",
+      "updatedAt": "2026-10-13T10:00:00Z", "recordUrl": "https://lims.example.invalid/records/EXAMPLE-003"
+    },
+    {
+      "externalRecordId": "EXAMPLE-004", "recordVersion": "1",
+      "sampleId": "SIM-SAMPLE-C", "batchId": "SIM-BATCH-02",
+      "protocolId": "SIM-HCS-01", "protocolVersion": "1",
+      "experimentId": "spheroid-screen-001", "runId": "run2",
+      "wellId": "run2-F11", "sourceImageId": "run2-F11", "replicateType": "technical",
+      "updatedAt": "2026-10-14T10:00:00Z", "recordUrl": "https://lims.example.invalid/records/EXAMPLE-004"
+    }
+  ]
+}

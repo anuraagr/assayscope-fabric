@@ -11,7 +11,7 @@
     "composite": true,
     "declaration": true,
     "skipLibCheck": true,
-    "outDir": "dist",
+    "outDir": ".temp/compiled",
     "rootDir": "."
   },
   "include": [

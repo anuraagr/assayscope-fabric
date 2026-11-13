@@ -1,0 +1,27 @@
+name: Research or engineering improvement
+description: Propose a concrete workflow improvement with its scientific and operational boundaries.
+title: "[Proposal]: "
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Research question or operational need
+      description: Describe the task and who needs to perform it; avoid sharing confidential study details.
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Proposed behavior and evidence
+      description: What should change and how would you verify it?
+    validations:
+      required: true
+  - type: textarea
+    id: boundaries
+    attributes:
+      label: Scientific, access and cost implications
+      description: Controls, replication, data rights, permissions and any additional platform services.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Existing workflow and alternatives

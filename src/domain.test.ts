@@ -73,6 +73,27 @@ describe('authorized, reproducible links', () => {
     expect(requireFabricConfig(valid).workspaceId).toBe(valid.VITE_FABRIC_WORKSPACE_ID);
     expect(() => requireFabricConfig({ ...valid, VITE_RAYFIN_API_URL: 'https://outside.invalid' })).toThrow('HTTPS Rayfin');
   });
+  it('accepts a resolved dedicated Fabric endpoint only for its configured resource coordinates', () => {
+    const capacity = '11111111-1111-4111-8111-111111111111';
+    const workspace = '22222222-2222-4222-8222-222222222222';
+    const item = '33333333-3333-4333-8333-333333333333';
+    const endpoint = `https://${capacity.replaceAll('-', '')}.pbidedicated.windows.net/webapi/capacities/${capacity}/workloads/BaaS/BaaSService/automatic/v1/workspaces/${workspace}/appbackends/${item}/`;
+    const valid = {
+      VITE_RAYFIN_API_URL: endpoint, VITE_RAYFIN_PUBLISHABLE_KEY: 'public-test',
+      VITE_FABRIC_WORKSPACE_ID: workspace, VITE_FABRIC_ITEM_ID: item,
+    };
+    expect(requireFabricConfig(valid).baseUrl).toBe(endpoint);
+    expect(() => requireFabricConfig({ ...valid, VITE_FABRIC_WORKSPACE_ID: item })).toThrow('does not match');
+    expect(() => requireFabricConfig({ ...valid, VITE_FABRIC_ITEM_ID: workspace })).toThrow('does not match');
+    for (const bad of [
+      endpoint.replace(capacity.replaceAll('-', ''), item.replaceAll('-', '')),
+      endpoint.replace('/appbackends/', '/unrelated/'),
+      endpoint.replace('.net/', '.net:444/'),
+      `${endpoint}?access_token=untrusted`,
+    ]) {
+      expect(() => requireFabricConfig({ ...valid, VITE_RAYFIN_API_URL: bad })).toThrow();
+    }
+  });
 });
 
 describe('visible access failures', () => {

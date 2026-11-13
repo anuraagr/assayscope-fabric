@@ -192,9 +192,9 @@ def build(root: Path, force=False) -> dict:
     catalog = {
         "schemaVersion": "1.0",
         "experiment": {
-            "id": "spheroid-screen-001", "title": "The signal is only half the story.",
-            "question": "Which apparent spheroid responses survive an acquisition-quality review?",
-            "summary": "Compare three fictional compounds across two simulated runs. Follow the images, not just the curve.",
+            "id": "spheroid-screen-001", "title": "Synthetic spheroid screening experiment",
+            "question": "How does acquisition quality affect the measured reporter response?",
+            "summary": "Three fictional compounds, eight concentrations and three technical replicates per concentration, acquired in two simulated runs.",
             "assay": "High-content spheroid screen", "sample": "Synthetic cell-line-like spheroids",
             "disclosure": "Simulated screening experiment. Fictional compounds and acquisition metadata. Research only.",
             "seed": SEED,

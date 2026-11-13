@@ -122,11 +122,13 @@ with BT474 into a response curve. BT474's stain identities are not inferred from
 
 ## Evaluation and remaining gaps
 
-The recorded implementation run yielded nuclear-mask Dice **0.9013**, exact count
-65/65 on one deterministic evaluation field, 3D mask IoU **0.9487** on the hero endpoint,
+The final regenerated-pack evaluation yielded nuclear-mask Dice **0.9013**, exact count
+65/65 on one deterministic evaluation field, 3D mask IoU **0.9487** on the selected endpoint,
 and 22/22 seeded acquisition issues detected with zero extra flags across 192 wells.
 These are tests against this generator's truth, **not independent real-data validation**.
 See [verification](verification.md) for executable commands and bounds.
+The final Python run verifies deterministic OME bytes, Plane DeltaT and nonzero NGFF
+time translation. The refreshed browser run uses those regenerated assets.
 
 This is a small, favorable synthetic benchmark. It does not establish robustness to
 real segmentation ambiguity, photobleaching, bleed-through, cell-density variation,

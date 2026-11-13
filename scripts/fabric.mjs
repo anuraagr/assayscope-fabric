@@ -4,11 +4,15 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const [action, ...args] = process.argv.slice(2);
-if (!['doctor', 'plan', 'apply', 'smoke', 'cleanup'].includes(action)) {
-  process.stderr.write('Expected doctor, plan, apply, smoke or cleanup.\n');
+if (!['doctor', 'plan', 'apply', 'smoke', 'cleanup',
+  'research-plan', 'research-apply', 'research-run', 'research-status',
+  'knowledge-plan', 'knowledge-apply', 'knowledge-publish', 'knowledge-smoke', 'knowledge-evaluate'].includes(action)) {
+  process.stderr.write('Expected a base, research or knowledge deployment action.\n');
   process.exit(2);
 }
-const mapped = ['-NoLogo', '-NoProfile', '-File', path.join(root, 'scripts', 'fabric.ps1'), '-Action', action];
+const knowledge = action.startsWith('knowledge-');
+const mapped = ['-NoLogo', '-NoProfile', '-File', path.join(root, 'scripts', knowledge ? 'knowledge.ps1' : 'fabric.ps1'),
+  '-Action', knowledge ? action.replace('knowledge-', '') : action];
 for (let i = 0; i < args.length; i++) {
   if (args[i] === '--config' && args[i + 1]) mapped.push('-ConfigPath', args[++i]);
   else if (args[i] === '--offline') mapped.push('-Offline');

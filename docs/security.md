@@ -46,7 +46,9 @@ token-shaped strings and credential query patterns. Never enable verbose token l
 - Shared catalog schema validates arrays, channels, time, paths and measurement contracts.
 - App annotations are plain text rendered by React; HTML export escapes them.
 - Decisions require an explicit human save; Guided analysis cannot change them.
-- No learned model/LLM receives data. Guided analysis is deterministic evidence retrieval.
+- Core Guided analysis is deterministic evidence retrieval. The optional deployed Fabric
+  data agent uses the tenant-managed generative service over explicitly selected curated
+  tables; this is a separate data-processing/capacity boundary, not the core image pipeline.
 - Deep links use a fresh allowlist of state fields; no inherited auth/storage query string.
 - Imported private data is not labeled public or connected and is not automatically uploaded.
 
@@ -57,21 +59,71 @@ time mismatches and unreviewed transforms. It is not a hardened public upload se
 
 ## Known limitations and required review
 
-Actual protected hosting, cross-user access denial and cloud functions authorization
-are **unverified without a tenant and second test identity**. Schema decorators and
-mock tests are not evidence of live enforcement.
+Actual protected hosting and anonymous Functions denial were verified with HTTP 401
+responses, and the authorized owner loaded the app through Fabric SSO. A different
+authenticated identity and a real cloud review write remain **unverified**. Schema
+decorators and mock tests are not evidence of cross-user enforcement.
 
 Cloud review revisions are append-only but not a GxP audit log. A concurrent read/version
 check is not a database-serializable transaction. Records are private to each author;
 shared live editing and group-specific experiment entitlements are not implemented.
 
-The dependency installation reported advisories in the Functions dependency graph.
-The npm advisory endpoints were rate-limited/TLS-inaccessible on this host, so a complete
-fresh dependency audit was **not verified**. Do not interpret successful unit tests as
-a clean vulnerability audit. Before tenant use, run `npm audit` in both the project and
-`rayfin/functions`, and review the pinned Python dependencies with your approved scanner.
-Do not apply `npm audit fix --force` blindly: Rayfin packages must remain compatible at
-one exact version. No production-readiness or zero-vulnerability claim is made.
+The previous patch pass checked the frontend runtime and Functions graphs against
+GitHub's documented reviewed-advisory API after scoped dependency updates; those queries
+returned no active reviewed advisories for the checked graphs. The normal npm audit
+endpoints were rate-limited/TLS-inaccessible, so this is not a complete clean audit.
+
+**The Python mismatch is resolved.** Approved-mirror wheel metadata confirms FastAPI
+0.162.0 accepts Starlette 1.3.1. Both and pip 26.2.0 are installed; `pip check`, all Python
+tests and fresh browser acceptance pass. Targeted reviewed-advisory queries returned
+no active entries for these exact candidates. This is not a full transitive audit.
+See [verification](verification.md) for versions, evidence and remaining cloud gates.
+
+Before production tenant use, run `npm audit` in both the project and
+`rayfin/functions` through an approved registry, and review the Python graph with an
+approved scanner. Do not disable TLS, bypass the dependency resolver, or apply
+`npm audit fix --force`: Rayfin packages must remain at one exact compatible version.
+Successful tests do not establish production readiness or absence of vulnerabilities.
+
+Local deployment tests exercise account/subscription guards, strict configuration
+booleans and GUIDs, redaction, bounded API retries/LROs, cleanup ownership and the upload
+allowlist. Authenticated requests do not follow redirects. The OneLake owner marker is
+created conditionally and checked against tenant, workspace and environment. These
+controls were exercised against the intended tenant; independent second-identity checks
+are still required. Regional LRO locations are not trusted as new authenticated origins:
+the documented operation ID is polled on the canonical Fabric API.
+
+## Research notebook and external context
+
+The notebook needs separate Lakehouse read and execution permissions. App Run/Interact
+does not grant these. It reads bounded analytical rows, validates lineage/QC and does not
+write tables or private reviews. Source deployment stops on external notebook edits,
+and execution checks that deployed code matches the reviewed source. Accepted job IDs
+are recorded before polling; run POSTs are not automatically retried.
+
+Notebook outputs, execution receipts and exported reports can contain scientific
+measurements. Keep them within approved workspace/retention boundaries and out of Git.
+The source notebook is output-free and has no resolved Lakehouse coordinates.
+
+The LIMS/ELN example is a local, schema-validated snapshot. No URL is fetched and no
+external task is created. It rejects ambiguous/mismatched identities and token-bearing
+record links. Real external records cannot be attached to the supplied simulated assay.
+Data-agent instructions do not enforce security: the deployed agent needs real source
+permissions and independent negative-identity tests. Model/content-filter results are
+recorded separately from authorization evidence. Private review rows are excluded from
+the shared ontology/agent. Its one selected source is the seven curated Lakehouse tables,
+not the transactional review store or arbitrary Files. All 637 curated rows were checked
+against the local scientific reduction before managed definitions were created.
+
+The operator resolved the feature gate by enabling `AppBackendTenant` on the existing
+capacity only. The agent did not change tenant-wide policy, anonymous/public hosting,
+roles or capacity. The protected app and dedicated Lakehouse are deployed, with actual
+OneLake hashes and SQL row/provenance checks recorded in [verification](verification.md).
+
+Direct Entra exchange with this host's existing Azure CLI token is unavailable because
+it lacks `Item.Execute.All`. No new consent or alternate identity was used. Browser SSO
+used the existing authorized Fabric session instead. Cloud test-write approval was
+requested but unavailable, so no review record was created on the user's behalf.
 
 Record a target-tenant security review, correct least-privilege app/data grants, explicit
 negative identity tests, capacity policies, data retention and dependency decisions

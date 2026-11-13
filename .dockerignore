@@ -1,7 +1,10 @@
 node_modules
 .venv
 data
+!rayfin/data
+!rayfin/data/**
 .deployment
+.azure
 .env*
 test-results
 dist
@@ -10,6 +13,7 @@ dist
 .vscode
 .handoff
 *.local.json
+**/*.local.json
 .pytest_cache
 .ruff_cache
 **/__pycache__
@@ -19,4 +23,5 @@ dist
 rayfin/.deployments.json
 rayfin/functions/dist
 rayfin/dist
+rayfin/.temp
 docs/screenshots

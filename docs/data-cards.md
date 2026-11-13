@@ -6,7 +6,7 @@
 |---|---|
 | Origin/rights | Original AssayScope CPU simulation; original code MIT |
 | Purpose | Research-review and acquisition-QC demonstration |
-| Scale | Two 96-well acquisitions; 192 measured 2D fields; six hero/control volume acquisitions |
+| Scale | Two 96-well acquisitions; 192 measured 2D fields; six treatment/control volume acquisitions |
 | Channels | Simulated nuclear stain, structural fluorescence, response reporter |
 | Models/compounds | Fictional cell-line-like spheroids; Aster-17, Beryl-04, Cygnus-09, vehicle |
 | Physical metadata | 2D 1.5 micrometers/pixel; 3D Z/Y/X 3/1.5/1.5 micrometers |
@@ -14,11 +14,13 @@
 | Analysis | Image-only CPU watershed and measurements; separate hidden evaluation truth |
 | Independence | Technical wells, not biological replicates; separate 2D and 3D acquisitions |
 | Boundaries | No patient data, real drug, proprietary hardware integration or learned model |
-| Size | Measured compressed pack 142,964,958 bytes in the implementation run; below 250 MB |
+| Size | Final regenerated pack: 142,995,887 compressed bytes; below 250 MB |
 
 Source frames and measurements are deterministic with pinned dependencies. Processing
 timestamps and source-code hashes document the actual run and are not expected to be
 identical across unrelated installations. [Scientific methods](scientific-method.md).
+Deterministic OME UUID/Plane DeltaT and nonzero NGFF time translation are covered by
+passing final Python tests. The earlier pack/evidence is preserved separately.
 
 ## Cell Painting Gallery: one field, three selected channels
 
@@ -68,6 +70,9 @@ The archive also contains HT6.tif (452,452,027 bytes), associated with different
 It was **not selected**. The file is not renamed as an organoid. No fetal/patient imagery
 from the design reference is used. Citation:
 [10.1101/2021.07.02.450855](https://doi.org/10.1101/2021.07.02.450855).
+
+The visibility default is set in the current manifest and regenerated reference index,
+and was verified in the final browser run. No source images were downloaded again.
 
 ## Download and provenance policy
 

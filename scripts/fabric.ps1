@@ -5,12 +5,14 @@ No login, context mutation, capacity creation, tenant setting changes or role gr
 #>
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory)][ValidateSet('doctor', 'plan', 'apply', 'smoke', 'cleanup')][string]$Action,
+    [Parameter(Mandatory)][ValidateSet('doctor', 'plan', 'apply', 'smoke', 'cleanup',
+        'research-plan', 'research-apply', 'research-run', 'research-status')][string]$Action,
     [string]$ConfigPath = 'config/tenant.local.json',
     [switch]$Offline,
     [switch]$ConfirmCosts,
     [string]$ConfirmDelete = '',
-    [switch]$WriteReview
+    [switch]$WriteReview,
+    [switch]$DefinitionsOnly
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -20,6 +22,7 @@ $script:Secrets = [System.Collections.Generic.List[string]]::new()
 $script:State = $null
 $script:StatePath = $null
 $script:FabricToken = ''
+$script:FabricSkill = if ($Action.StartsWith('research-')) { 'spark-authoring-cli' } else { '' }
 
 function Write-DemoLog {
     param([string]$Message)
@@ -53,11 +56,14 @@ function Assert-DemoAzContext {
 }
 function Get-DemoToken {
     param([string]$Resource)
-    $response = Invoke-DemoAz -Arguments @('account','get-access-token','--resource',$Resource,'--tenant',$script:Config.tenantId)
+    $response = Invoke-DemoAz -Arguments @('account','get-access-token','--resource',$Resource)
     if ($response['accessToken'] -isnot [string] -or [string]::IsNullOrWhiteSpace($response['accessToken'])) {
         throw 'Azure CLI did not return a usable access token.'
     }
     $script:Secrets.Add($response.accessToken)
+    if ($response['tenant'] -ne $script:Config.tenantId -or $response['subscription'] -ne $script:Config.subscriptionId) {
+        throw 'Azure CLI returned a token for a different tenant or subscription.'
+    }
     return $response.accessToken
 }
 function Assert-DemoConfig {
@@ -94,12 +100,15 @@ function Assert-DemoState {
         $key = switch ($item.type) {
             'Lakehouse' { 'lakehouseId' }
             'AppBackend' { 'appItemId' }
+            'Notebook' { 'researchNotebookId' }
+            'Ontology' { 'ontologyId' }
+            'DataAgent' { 'dataAgentId' }
             default { throw 'Deployment state contains an unsupported cleanup resource type.' }
         }
         $parsed = [Guid]::Empty
         if (-not [Guid]::TryParse($item.id, [ref]$parsed) -or $parsed -eq [Guid]::Empty -or
             $item.id -ne $State[$key] -or [string]::IsNullOrWhiteSpace($item.name)) {
-            throw 'Cleanup ownership does not match the recorded app or Lakehouse.'
+            throw 'Cleanup ownership does not match the recorded resource.'
         }
     }
 }
@@ -129,6 +138,26 @@ function Get-DemoUploadFiles {
     }
     return $files
 }
+function Send-DemoFile {
+    param([IO.FileInfo]$File, [string]$Core, [string]$PrefixUrl, [hashtable]$Headers, [hashtable]$Uploaded)
+    $ErrorActionPreference = 'Stop'
+    $relative = [IO.Path]::GetRelativePath($Core, $File.FullName).Replace('\','/')
+    $hash = (Get-FileHash -LiteralPath $File.FullName -Algorithm SHA256).Hash
+    try {
+        if ($Uploaded.ContainsKey($relative) -and $Uploaded[$relative] -eq $hash) {
+            $head = Invoke-WebRequest -Uri "$PrefixUrl/$relative" -Method Head -Headers $Headers -SkipHttpErrorCheck -TimeoutSec 30 -MaximumRedirection 0
+            if ($head.StatusCode -eq 200 -and [long]($head.Headers.'Content-Length' | Select-Object -First 1) -eq $File.Length) {
+                return @{relative=$relative; hash=$hash; uploaded=$false; failure=$null}
+            }
+            if ($head.StatusCode -notin @(200,404)) { throw "OneLake read failed (HTTP $($head.StatusCode)); upload stopped." }
+        }
+        $result = Invoke-WebRequest -Uri "$PrefixUrl/$relative" -Method Put -Headers $Headers -InFile $File.FullName -ContentType 'application/octet-stream' -TimeoutSec 120 -MaximumRedirection 0 -SkipHttpErrorCheck
+        if ($result.StatusCode -notin @(200,201)) { throw "OneLake upload failed (HTTP $($result.StatusCode))." }
+        return @{relative=$relative; hash=$hash; uploaded=$true; failure=$null}
+    } catch {
+        return @{relative=$relative; hash=$hash; uploaded=$false; failure="Upload failed for ${relative}: $($_.Exception.Message)"}
+    }
+}
 function Assert-FabricUrl {
     param([string]$Url)
     $uri = $null
@@ -141,7 +170,8 @@ function Assert-FabricUrl {
     }
 }
 function Invoke-Fabric {
-    param([string]$Path, [string]$Method = 'GET', [object]$Body = $null, [switch]$ReturnOperationResult)
+    param([string]$Path, [string]$Method = 'GET', [object]$Body = $null,
+          [switch]$ReturnOperationResult, [switch]$NoRetry)
     $url = if ($Path -match '^[a-zA-Z][a-zA-Z0-9+.-]*:') { $Path } else { "https://api.fabric.microsoft.com/v1/$Path" }
     Assert-FabricUrl -Url $url
     $uri = [Uri]$url
@@ -150,18 +180,36 @@ function Invoke-Fabric {
             Uri = $url; Method = $Method; Headers = @{Authorization = "Bearer $script:FabricToken"}
             TimeoutSec = 60; SkipHttpErrorCheck = $true; MaximumRedirection = 0
         }
+        if ($script:FabricSkill) { $parameters.Headers['x-ms-fabric-skill'] = $script:FabricSkill }
         if ($null -ne $Body) { $parameters.Body = $Body | ConvertTo-Json -Depth 40 -Compress; $parameters.ContentType = 'application/json' }
         $response = Invoke-WebRequest @parameters
         if ($response.StatusCode -eq 429 -or $response.StatusCode -ge 500) {
-            if ($attempt -lt 2) { Start-Sleep -Seconds ([Math]::Pow(2, $attempt + 1)); continue }
+            if (-not $NoRetry -and $attempt -lt 2) { Start-Sleep -Seconds ([Math]::Pow(2, $attempt + 1)); continue }
         }
         if ($response.StatusCode -ge 400) { throw "Fabric returned HTTP $($response.StatusCode) for $Method $($uri.AbsolutePath). Check intended identity and permissions." }
+        if ($response.StatusCode -ge 300) { throw "Fabric returned an unexpected redirect (HTTP $($response.StatusCode)); credentials were not forwarded." }
         if ($response.StatusCode -eq 202) {
-            $operation = [string]($response.Headers.Location | Select-Object -First 1)
+            $operationId = [string]($response.Headers['x-ms-operation-id'] | Select-Object -First 1)
+            if ($operationId) {
+                $parsed = [Guid]::Empty
+                if (-not [Guid]::TryParse($operationId, [ref]$parsed) -or $parsed -eq [Guid]::Empty) {
+                    throw 'Fabric returned an invalid long-running operation ID.'
+                }
+                $operation = "https://api.fabric.microsoft.com/v1/operations/$parsed"
+            } else {
+                $operation = [string]($response.Headers['Location'] | Select-Object -First 1)
+            }
             Assert-FabricUrl -Url $operation
+            $wait = 5
+            $retryAfter = [string]($response.Headers['Retry-After'] | Select-Object -First 1)
+            if ($retryAfter -and (-not [int]::TryParse($retryAfter, [ref]$wait) -or $wait -lt 1 -or $wait -gt 600)) {
+                throw 'Fabric Retry-After is outside the bounded 10-minute operation wait.'
+            }
+            Write-DemoLog "FABRIC.LRO | Pending | $operation"
+            $deadline = [DateTime]::UtcNow.AddMinutes(10)
             $complete = $false
-            for ($poll = 0; $poll -lt 120; $poll++) {
-                Start-Sleep -Seconds 5
+            for ($poll = 0; $poll -lt 120 -and [DateTime]::UtcNow -lt $deadline; $poll++) {
+                Start-Sleep -Seconds $wait
                 $state = Invoke-Fabric -Path $operation
                 if ($state.status -eq 'Succeeded') { $complete = $true; break }
                 if ($state.status -in @('Failed','Cancelled')) { throw 'Fabric long-running operation failed; inspect the operation in the target workspace.' }
@@ -197,11 +245,234 @@ function Invoke-Checked {
         if ($LASTEXITCODE -ne 0) { throw "$Program failed with exit code $LASTEXITCODE." }
     } finally { Pop-Location }
 }
+function Restore-DemoNodeDependencies {
+    param([string]$Directory, [switch]$LockfileChanged)
+    Push-Location -LiteralPath $Directory
+    try {
+        $check = & npm ls --depth=0 --json 2>&1
+        if ($LASTEXITCODE -eq 0 -and -not $LockfileChanged) {
+            Write-DemoLog 'DEPENDENCIES | Pass | Existing installed packages satisfy the staged manifest.'
+            return
+        }
+        Write-DemoLog ($check -join "`n")
+        Write-DemoLog 'DEPENDENCIES | Restore | Lockfile changed or installed dependencies are missing/inconsistent; restoring the exact lockfile.'
+        Invoke-Checked -Program 'npm' -Arguments @('ci','--no-audit','--no-fund') -Directory $Directory
+    } finally { Pop-Location }
+}
 function Resolve-Python {
     $candidate = if ($IsWindows) { Join-Path $Root '.venv\Scripts\python.exe' } else { Join-Path $Root '.venv/bin/python' }
     if (-not (Test-Path -LiteralPath $candidate)) { throw 'Create the Python 3.12 virtual environment and install requirements.txt first.' }
     return $candidate
 }
+function Get-DemoNotebookHash {
+    param([hashtable]$Notebook)
+    $cells = @($Notebook.cells | ForEach-Object {
+        [ordered]@{type=$_.cell_type; source=($_.source -join '')}
+    })
+    $content = [ordered]@{
+        cells=$cells
+        lakehouse=$Notebook.metadata.dependencies.lakehouse.default_lakehouse
+        workspace=$Notebook.metadata.dependencies.lakehouse.default_lakehouse_workspace_id
+    } | ConvertTo-Json -Depth 40 -Compress
+    return [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($content))).ToLowerInvariant()
+}
+function New-DemoNotebookDefinition {
+    param([string]$Path, [hashtable]$Lakehouse, [string]$WorkspaceId)
+    if ((Get-Item -LiteralPath $Path).Length -gt 2MB) { throw 'Research notebook exceeds the 2 MiB source bound.' }
+    $notebook = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json -AsHashtable
+    if ($notebook.nbformat -ne 4 -or -not $notebook.metadata.assayscope.read_only -or
+        $notebook.metadata.ContainsKey('dependencies')) {
+        throw 'Research notebook must be an unbound, read-only source template.'
+    }
+    foreach ($cell in $notebook.cells) {
+        if ($cell.cell_type -eq 'code' -and (@($cell.outputs).Count -or $null -ne $cell.execution_count)) {
+            throw 'Notebook source must not contain execution outputs.'
+        }
+    }
+    foreach ($value in @($WorkspaceId, $Lakehouse.id)) {
+        $parsed = [Guid]::Empty
+        if (-not [Guid]::TryParse($value, [ref]$parsed) -or $parsed -eq [Guid]::Empty) {
+            throw 'Notebook binding requires verified workspace and Lakehouse GUIDs.'
+        }
+    }
+    if ($Lakehouse.type -ne 'Lakehouse' -or [string]::IsNullOrWhiteSpace($Lakehouse.displayName)) {
+        throw 'Notebook binding requires a resolved Lakehouse.'
+    }
+    $notebook.metadata.dependencies = @{
+        lakehouse=@{
+            default_lakehouse=$Lakehouse.id
+            default_lakehouse_name=$Lakehouse.displayName
+            default_lakehouse_workspace_id=$WorkspaceId
+            known_lakehouses=@(@{id=$Lakehouse.id})
+        }
+    }
+    $json = $notebook | ConvertTo-Json -Depth 40 -Compress
+    return @{
+        hash=(Get-DemoNotebookHash $notebook)
+        definition=@{
+            format='ipynb'
+            parts=@(@{path='notebook-content.ipynb'; payloadType='InlineBase64'
+                payload=[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($json))})
+        }
+    }
+}
+function Read-DemoResearchNotebook {
+    param([string]$NotebookId)
+    $live = Invoke-Fabric "workspaces/$($script:Config.workspaceId)/notebooks/$NotebookId/getDefinition?format=ipynb" 'POST' @{} -ReturnOperationResult
+    $parts = @($live.definition.parts | Where-Object { $_.path -like '*.ipynb' })
+    if ($parts.Count -ne 1) { throw 'Could not read the recorded notebook definition before updating or executing.' }
+    return [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($parts[0].payload)) | ConvertFrom-Json -AsHashtable
+}
+function Publish-DemoResearchNotebook {
+    param([array]$Items, [hashtable]$Lakehouse, [string]$TemplatePath)
+    $workspaceId = $script:Config.workspaceId
+    $name = "assayscope-$($script:Config.environment)-research-review"
+    $prepared = New-DemoNotebookDefinition $TemplatePath $Lakehouse $workspaceId
+    $id = $script:State['researchNotebookId']
+    if ($id) {
+        $current = @($Items | Where-Object { $_.id -eq $id -and $_.type -eq 'Notebook' })
+        if ($current.Count -ne 1 -or $current[0].displayName -ne $name) {
+            throw 'Recorded research notebook is missing or renamed; no item was overwritten.'
+        }
+        $decoded = Read-DemoResearchNotebook $id
+        $liveHash = Get-DemoNotebookHash $decoded
+        if ($liveHash -eq $prepared.hash) {
+            New-DemoResult 'RESEARCH.CONTENT' 'Pass' 'The existing notebook matches source and its intended Lakehouse binding.'
+            return
+        }
+        if ($liveHash -ne $script:State['researchContentHash']) {
+            throw 'Notebook was edited outside this source deployment. Preserve and reconcile those edits before applying.'
+        }
+        Invoke-Fabric "workspaces/$workspaceId/notebooks/$id/updateDefinition" 'POST' @{definition=$prepared.definition} -NoRetry | Out-Null
+    } else {
+        if (@($Items | Where-Object { $_.displayName -eq $name }).Count) {
+            throw 'A same-name notebook exists without recorded ownership. No duplicate or overwrite was attempted.'
+        }
+        $created = Invoke-Fabric "workspaces/$workspaceId/notebooks" 'POST' @{
+            displayName=$name
+            description='Read-only control dispersion, QC sensitivity, technical replication and source lineage for the simulated AssayScope assay.'
+            definition=$prepared.definition
+        } -ReturnOperationResult -NoRetry
+        $parsed = [Guid]::Empty
+        if (-not [Guid]::TryParse($created.id, [ref]$parsed) -or $parsed -eq [Guid]::Empty) {
+            throw 'Notebook creation did not return an item GUID. Inspect the workspace; do not retry creation blindly.'
+        }
+        $script:State.researchNotebookId = $created.id
+        $script:State.created += @{id=$created.id; type='Notebook'; name=$name}
+    }
+    $script:State.researchContentHash = $prepared.hash
+    Save-State
+    New-DemoResult 'RESEARCH.DEPLOYED' 'Pass' "Read-only notebook $($script:State.researchNotebookId) is attached to the existing Lakehouse. Spark was not started."
+}
+function Start-DemoResearchJob {
+    param([string]$NotebookId)
+    $workspaceId = $script:Config.workspaceId
+    $url = "https://api.fabric.microsoft.com/v1/workspaces/$workspaceId/items/$NotebookId/jobs/RunNotebook/instances"
+    $response = Invoke-WebRequest -Uri $url -Method POST -Headers @{Authorization="Bearer $script:FabricToken"; 'x-ms-fabric-skill'='spark-authoring-cli'} `
+        -ContentType 'application/json' -Body '{}' -TimeoutSec 60 -MaximumRedirection 0 -SkipHttpErrorCheck
+    if ($response.StatusCode -ne 202) {
+        throw "Notebook run returned HTTP $($response.StatusCode). Check recent jobs before any retry; no automatic POST retry was made."
+    }
+    $location = [string]($response.Headers['Location'] | Select-Object -First 1)
+    Assert-FabricUrl $location
+    $expected = "^https://api\.fabric\.microsoft\.com/v1/workspaces/$workspaceId/items/$NotebookId/jobs/instances/([0-9a-fA-F-]{36})$"
+    if ($location -notmatch $expected) {
+        throw 'Notebook job location does not match the intended item. Inspect recent jobs before retrying.'
+    }
+    $parsed = [Guid]::Empty
+    if (-not [Guid]::TryParse($Matches[1], [ref]$parsed) -or $parsed -eq [Guid]::Empty) {
+        throw 'Notebook job returned an invalid instance ID.'
+    }
+    $script:State.researchJobId = $parsed.ToString()
+    $script:State.researchJobSubmittedAt = [DateTime]::UtcNow.ToString('o')
+    Save-State
+    $wait = 15
+    $header = [string]($response.Headers['Retry-After'] | Select-Object -First 1)
+    if ($header -and (-not [int]::TryParse($header, [ref]$wait) -or $wait -lt 1 -or $wait -gt 600)) {
+        throw 'Notebook job Retry-After is outside the bounded wait. The recorded job must be monitored, not resubmitted.'
+    }
+    Write-DemoLog "RESEARCH.JOB | Submitted | $($script:State.researchJobId)"
+    Start-Sleep -Seconds $wait
+}
+function Wait-DemoResearchJob {
+    param([string]$NotebookId, [switch]$Once)
+    $jobId = $script:State['researchJobId']
+    if (-not $jobId) { throw 'No research job is recorded. Apply the notebook, then explicitly run it.' }
+    foreach ($value in @($NotebookId, $jobId)) {
+        $parsed = [Guid]::Empty
+        if (-not [Guid]::TryParse($value, [ref]$parsed) -or $parsed -eq [Guid]::Empty) {
+            throw 'Research notebook/job identities must be valid GUIDs.'
+        }
+    }
+    $path = "workspaces/$($script:Config.workspaceId)/items/$NotebookId/jobs/instances/$jobId"
+    $deadline = [DateTime]::UtcNow.AddMinutes(15)
+    for ($poll = 0; $poll -lt 60 -and [DateTime]::UtcNow -lt $deadline; $poll++) {
+        $job = Invoke-Fabric $path
+        $script:State.researchJobStatus = $job.status
+        Save-State
+        Write-DemoLog "RESEARCH.JOB | $($job.status) | $jobId"
+        if ($job.status -eq 'Completed') { return $job }
+        if ($job.status -in @('Failed','Cancelled','Deduped')) {
+            throw "Notebook job $jobId ended with $($job.status). Inspect its Fabric run output; source data was not modified."
+        }
+        if ($job.status -notin @('NotStarted','InProgress')) { throw 'Unknown notebook job state; do not resubmit.' }
+        if ($Once) { return $job }
+        Start-Sleep -Seconds 15
+    }
+    throw "Notebook job $jobId is still pending. Use fabric:research:status; do not submit another run."
+}
+function Get-DemoResearchReceipt {
+    param([string]$NotebookId)
+    $jobId = $script:State.researchJobId
+    $detail = Invoke-Fabric "workspaces/$($script:Config.workspaceId)/notebooks/$NotebookId/jobs/execute/instances/$jobId`?beta=true"
+    if ($detail.id -ne $jobId -or $detail.itemId -ne $NotebookId -or $detail.status -ne 'Completed') {
+        throw 'Notebook execution receipt does not match the recorded completed job.'
+    }
+    $raw = $detail.properties.exitValue
+    if ($raw -isnot [string] -or $raw.Length -gt 65536) {
+        throw 'The completed notebook did not return a bounded research receipt.'
+    }
+    $receipt = $raw | ConvertFrom-Json -AsHashtable
+    if ($receipt.experiment_id -ne 'spheroid-screen-001' -or
+        $receipt.input_tables_sha256 -isnot [string] -or $receipt.input_tables_sha256 -notmatch '^[a-f0-9]{64}$' -or
+        $receipt.table_rows -isnot [hashtable] -or $receipt.table_rows.Count -ne 5 -or
+        @($receipt.runs).Count -lt 1 -or @($receipt.runs).Count -gt 10000) {
+        throw 'The notebook receipt does not match the registered research output contract.'
+    }
+    foreach ($table in @('experiments','acquisitions','measurements','qc','provenance')) {
+        $count = $receipt.table_rows["assayscope_$table"]
+        if (($count -isnot [int] -and $count -isnot [long]) -or $count -lt 1 -or $count -gt 10000) {
+            throw 'The notebook receipt has missing or unbounded analytical table counts.'
+        }
+    }
+    $total = 0
+    foreach ($run in $receipt.runs) {
+        foreach ($key in @('total_wells','included_wells','excluded_wells','unmeasured_wells','included_control_wells')) {
+            $count = $run[$key]
+            if (($count -isnot [int] -and $count -isnot [long]) -or $count -lt 0 -or $count -gt 10000) {
+                throw 'The notebook receipt has invalid technical-well counts.'
+            }
+        }
+        if ($run.total_wells -ne ($run.included_wells + $run.excluded_wells + $run.unmeasured_wells) -or
+            $run.included_control_wells -gt $run.included_wells) {
+            throw 'The notebook receipt has inconsistent technical-well accounting.'
+        }
+        $total += $run.total_wells
+    }
+    if ($total -ne $receipt.table_rows.assayscope_measurements) {
+        throw 'Notebook run counts disagree with measurement-table rows.'
+    }
+    foreach ($key in @('condition_count','flagged_well_count')) {
+        $count = $receipt[$key]
+        if (($count -isnot [int] -and $count -isnot [long]) -or $count -lt 0 -or $count -gt 10000) {
+            throw 'The notebook receipt has invalid research summary counts.'
+        }
+    }
+    return @{jobId=$jobId; status=$detail.status; startTimeUtc=$detail.startTimeUtc
+        endTimeUtc=$detail.endTimeUtc; result=$receipt}
+}
+
+if ($DefinitionsOnly) { return }
 
 try {
     $schema = Get-Content -LiteralPath (Join-Path $Root 'contracts/catalog.schema.json') -Raw | ConvertFrom-Json
@@ -222,7 +493,12 @@ try {
     } else { 0 }
     New-DemoResult 'DATA.SIZE' 'Pass' "Prepared core assets: $bytes bytes. Public raw files and generator truth are excluded from tenant upload."
     if ($Offline) {
-        if ($Action -notin @('doctor','plan')) { throw 'Offline mode supports doctor and plan only.' }
+        if ($Action -notin @('doctor','plan','research-plan')) { throw 'Offline mode supports doctor, plan and research-plan only.' }
+        if ($Action -eq 'research-plan') {
+            Invoke-Checked -Program $python -Arguments @('-m','scripts.build_research_notebook','--check')
+            New-DemoResult 'RESEARCH.PLAN' 'Pass' 'One optional read-only notebook attached to the existing Lakehouse. Apply does not start Spark; an explicit run consumes existing capacity. No new capacity, model, schedule, data writes or permissions.'
+            exit 0
+        }
         New-DemoResult 'PLAN.RESOURCES' 'Warning' 'One protected Fabric AppBackend and child SQL/Functions/static services, one dedicated Lakehouse, five analytical tables, and bounded image assets. Existing capacity only.'
         New-DemoResult 'CLOUD.VERIFICATION' 'Not selected' 'Offline plan: no authentication or cloud calls. Tenant, capacity, app availability, access and costs remain unverified.'
         exit 0
@@ -231,6 +507,9 @@ try {
     Assert-DemoConfig -Configuration $script:Config
     if ($Action -eq 'apply' -and (-not $ConfirmCosts -or -not $supportedNode)) {
         throw 'Apply requires supported Node 24 and --confirm-costs after reviewing the plan. No paid capacity is created.'
+    }
+    if ($Action -in @('research-apply','research-run') -and -not $ConfirmCosts) {
+        throw 'Research deployment/execution requires --confirm-costs and the configured existing target.'
     }
     Assert-DemoAzContext
     $script:FabricToken = Get-DemoToken -Resource 'https://api.fabric.microsoft.com'
@@ -273,7 +552,7 @@ try {
             New-DemoResult 'CLEANUP.CONFIRM' 'Manual action required' "No deletion. Rerun with --confirm-delete $($script:Config.environment) after reviewing every ID."
             exit 0
         }
-        foreach ($owned in @($script:State.created | Sort-Object -Property @{Expression={ if ($_.type -eq 'AppBackend') {0} else {1} }})) {
+        foreach ($owned in @($script:State.created | Sort-Object -Property @{Expression={ switch ($_.type) { 'DataAgent' {0} 'Ontology' {1} 'Notebook' {2} 'AppBackend' {3} default {4} } }})) {
             $current = @($items | Where-Object { $_.id -eq $owned.id })
             if ($current.Count -eq 0) { continue }
             if ($current[0].type -ne $owned.type -or $current[0].displayName -ne $owned.name) {
@@ -282,8 +561,57 @@ try {
             Invoke-Fabric -Path "workspaces/$workspaceId/items/$($owned.id)" -Method 'DELETE' | Out-Null
         }
         $script:State.created = @(); $script:State.lakehouseId = ''; $script:State.appItemId = ''; $script:State.uploaded = @{}
+        foreach ($key in @('researchNotebookId','researchContentHash','researchJobId','researchJobStatus','researchJobSubmittedAt')) {
+            $script:State.Remove($key)
+        }
+        foreach ($key in @('ontologyId','dataAgentId','knowledgeContentHashes','knowledgeDefinitionHashes','knowledgeUploaded','knowledgeTableOwnership','knowledgeLoaded')) {
+            $script:State.Remove($key)
+        }
         Save-State
         New-DemoResult 'CLEANUP' 'Pass' 'Deleted only recorded demo-created items. Existing items, workspace, capacity, and local files were not deleted; soft-delete retention can continue billing.'
+        exit 0
+    }
+    if ($Action.StartsWith('research-')) {
+        if (-not $script:State.lakehouseId) { throw 'Deploy or explicitly configure the existing analytical Lakehouse first.' }
+        $lakehouses = @($items | Where-Object { $_.id -eq $script:State.lakehouseId -and $_.type -eq 'Lakehouse' })
+        if ($lakehouses.Count -ne 1) { throw 'The recorded Lakehouse is not accessible in the intended workspace.' }
+        Invoke-Checked -Program $python -Arguments @('-m','scripts.build_research_notebook','--check')
+        New-DemoResult 'RESEARCH.PLAN' 'Pass' 'One read-only research notebook; existing Lakehouse and capacity. No table writes, schedules, model service, policy changes or additional capacity.'
+        if ($Action -eq 'research-plan') { exit 0 }
+        if ($Action -eq 'research-apply') {
+            Publish-DemoResearchNotebook -Items $items -Lakehouse $lakehouses[0] -TemplatePath (Join-Path $Root 'notebooks/research-review.ipynb')
+            exit 0
+        }
+        $notebookId = $script:State['researchNotebookId']
+        if (-not $notebookId -or @($items | Where-Object { $_.id -eq $notebookId -and $_.type -eq 'Notebook' }).Count -ne 1) {
+            throw 'No accessible recorded research notebook; apply it first.'
+        }
+        if ($Action -eq 'research-run') {
+            $prepared = New-DemoNotebookDefinition (Join-Path $Root 'notebooks/research-review.ipynb') $lakehouses[0] $workspaceId
+            $liveHash = Get-DemoNotebookHash (Read-DemoResearchNotebook $notebookId)
+            if ($liveHash -ne $prepared.hash) {
+                throw 'The deployed notebook differs from reviewed source. Reconcile/apply before executing; no job was submitted.'
+            }
+            $jobs = @(Get-FabricList "workspaces/$workspaceId/items/$notebookId/jobs/instances")
+            $recent = @($jobs | Where-Object {
+                $_.status -in @('NotStarted','InProgress') -or
+                [DateTime]::Parse($_.startTimeUtc).ToUniversalTime() -ge [DateTime]::UtcNow.AddMinutes(-5)
+            } | Sort-Object startTimeUtc -Descending)
+            if ($recent.Count) {
+                $script:State.researchJobId = $recent[0].id
+                Save-State
+                New-DemoResult 'RESEARCH.REUSE' 'Pass' 'Monitoring an active/recent notebook job instead of creating a duplicate.'
+            } else {
+                Start-DemoResearchJob $notebookId
+            }
+        }
+        $job = Wait-DemoResearchJob $notebookId -Once:($Action -eq 'research-status')
+        $job | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath (Join-Path $stateDirectory 'research-job.json') -Encoding utf8
+        if ($job.status -eq 'Completed') {
+            $receipt = Get-DemoResearchReceipt $notebookId
+            $receipt | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath (Join-Path $stateDirectory 'research-receipt.json') -Encoding utf8
+            New-DemoResult 'RESEARCH.RECEIPT' 'Pass' "Actual notebook output: $($receipt.result.condition_count) condition/run rows; $($receipt.result.flagged_well_count) flagged wells. See research-receipt.json in this environment's state directory."
+        }
         exit 0
     }
     if ($Action -in @('doctor','plan')) {
@@ -294,7 +622,7 @@ try {
             $previousToken = $env:RAYFIN_TOKEN
             $env:RAYFIN_TOKEN = $script:FabricToken
             try {
-                Invoke-Checked -Program 'npx' -Arguments @('--no-install','rayfin','up','--dry-run','--workspace-id',
+                Invoke-Checked -Program 'npx' -Arguments @('--offline','--no-install','rayfin','up','--dry-run','--workspace-id',
                     $workspaceId,'--tenant',$script:Config.tenantId,'--item-name',$appName,'-y')
             } finally { $env:RAYFIN_TOKEN = $previousToken }
         }
@@ -349,17 +677,21 @@ try {
     } elseif ($marker.StatusCode -eq 404) {
         Invoke-WebRequest -Uri $markerUrl -Method Put -Headers ($headers + @{'If-None-Match'='*'}) -Body ($ownedMarker | ConvertTo-Json -Compress) -ContentType 'application/json' -MaximumRedirection 0 -TimeoutSec 30 | Out-Null
     } else { throw "OneLake access denied/unavailable (HTTP $($marker.StatusCode)); verify scoped storage access." }
-    foreach ($file in $uploadFiles) {
-        $relative = [IO.Path]::GetRelativePath($core, $file.FullName).Replace('\','/')
-        $hash = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash
-        if ($script:State.uploaded.ContainsKey($relative) -and $script:State.uploaded[$relative] -eq $hash) {
-            $head = Invoke-WebRequest -Uri "$blobRoot/$prefix/$relative" -Method Head -Headers $headers -SkipHttpErrorCheck -TimeoutSec 30 -MaximumRedirection 0
-            if ($head.StatusCode -eq 200 -and [long]($head.Headers.'Content-Length' | Select-Object -First 1) -eq $file.Length) { continue }
-            if ($head.StatusCode -notin @(200,404)) { throw "OneLake read failed (HTTP $($head.StatusCode)); upload stopped." }
-        }
-        Invoke-WebRequest -Uri "$blobRoot/$prefix/$relative" -Method Put -Headers $headers -InFile $file.FullName -ContentType 'application/octet-stream' -TimeoutSec 120 -MaximumRedirection 0 | Out-Null
-        $script:State.uploaded[$relative] = $hash
+    $processedFiles = 0
+    $uploadWorker = ${function:Send-DemoFile}.ToString()
+    $priorUploads = $script:State.uploaded.Clone()
+    $prefixUrl = "$blobRoot/$prefix"
+    $uploadFiles | ForEach-Object -Parallel {
+        $worker = [scriptblock]::Create($using:uploadWorker)
+        & $worker -File $_ -Core $using:core -PrefixUrl $using:prefixUrl -Headers $using:headers -Uploaded $using:priorUploads
+    } -ThrottleLimit 4 | ForEach-Object {
+        if ($_.failure) { throw $_.failure }
+        $script:State.uploaded[$_.relative] = $_.hash
         Save-State
+        $processedFiles++
+        if ($processedFiles % 100 -eq 0 -or $processedFiles -eq $uploadFiles.Count) {
+            Write-DemoLog "INGEST.FILES | Progress | $processedFiles/$($uploadFiles.Count) files verified or uploaded."
+        }
     }
     $tables = Get-Content -LiteralPath (Join-Path $core 'tables/tables.json') -Raw | ConvertFrom-Json
     foreach ($table in $tables) {
@@ -373,6 +705,8 @@ try {
         throw 'A same-name app already exists outside this environment state. Review its identity before adopting it.'
     }
     $stage = Join-Path $stateDirectory 'project'
+    $stageLock = Join-Path $stage 'package-lock.json'
+    $stageLockBefore = if (Test-Path -LiteralPath $stageLock) { (Get-FileHash -LiteralPath $stageLock -Algorithm SHA256).Hash } else { '' }
     New-Item -ItemType Directory -Path $stage -Force | Out-Null
     foreach ($folder in @('src','contracts','scripts')) {
         Copy-Item -LiteralPath (Join-Path $Root $folder) -Destination $stage -Recurse -Force
@@ -385,6 +719,8 @@ try {
     foreach ($folder in @('data')) { Copy-Item -LiteralPath (Join-Path $Root "rayfin/$folder") -Destination $stageRayfin -Recurse -Force }
     foreach ($file in @('rayfin.yml','tsconfig.json')) { Copy-Item -LiteralPath (Join-Path $Root "rayfin/$file") -Destination $stageRayfin -Force }
     $functionStage = Join-Path $stageRayfin 'functions'
+    $functionLock = Join-Path $functionStage 'package-lock.json'
+    $functionLockBefore = if (Test-Path -LiteralPath $functionLock) { (Get-FileHash -LiteralPath $functionLock -Algorithm SHA256).Hash } else { '' }
     New-Item -ItemType Directory -Path $functionStage -Force | Out-Null
     Copy-Item -LiteralPath (Join-Path $Root 'rayfin/functions/src') -Destination $functionStage -Recurse -Force
     foreach ($file in @('package.json','package-lock.json','tsconfig.json','host.json')) {
@@ -396,13 +732,13 @@ try {
         sqlDatabase=$lakehouse.properties.sqlEndpointProperties.id; experimentId='spheroid-screen-001'
     }
     "export const target = $($resolved | ConvertTo-Json -Compress);" | Set-Content -LiteralPath (Join-Path $functionStage 'src/target.ts') -Encoding utf8
-    Invoke-Checked -Program 'npm' -Arguments @('ci','--no-audit','--no-fund') -Directory $stage
-    Invoke-Checked -Program 'npm' -Arguments @('ci','--no-audit','--no-fund') -Directory $functionStage
+    Restore-DemoNodeDependencies -Directory $stage -LockfileChanged:($stageLockBefore -ne (Get-FileHash -LiteralPath $stageLock -Algorithm SHA256).Hash)
+    Restore-DemoNodeDependencies -Directory $functionStage -LockfileChanged:($functionLockBefore -ne (Get-FileHash -LiteralPath $functionLock -Algorithm SHA256).Hash)
     Invoke-Checked -Program 'npm' -Arguments @('run','build') -Directory $functionStage
     $previousToken = $env:RAYFIN_TOKEN
     $env:RAYFIN_TOKEN = $script:FabricToken
     try {
-        Invoke-Checked -Program 'npx' -Arguments @('--no-install','rayfin','up','--workspace-id',$workspaceId,
+        Invoke-Checked -Program 'npx' -Arguments @('--offline','--no-install','rayfin','up','--workspace-id',$workspaceId,
             '--tenant',$script:Config.tenantId,'--item-name',$appName,'--exclude-services','staticHosting','-y') -Directory $stage
         $deployed = @(Get-FabricList -Path "workspaces/$workspaceId/items" | Where-Object { $_.displayName -eq $appName -and $_.type -eq 'AppBackend' })
         if ($deployed.Count -ne 1) { throw 'Could not resolve exactly one deployed app.' }
@@ -411,10 +747,10 @@ try {
             $script:State.created += @{id=$deployed[0].id; type='AppBackend'; name=$appName}
             Save-State
         } elseif ($script:State.appItemId -ne $deployed[0].id) { throw 'CLI resolved an app different from the intended item ID.' }
-        Invoke-Checked -Program 'npx' -Arguments @('--no-install','rayfin','env','--framework','vite') -Directory $stage
-        Invoke-Checked -Program 'npx' -Arguments @('--no-install','rayfin','up','--workspace-id',$workspaceId,
+        Invoke-Checked -Program 'npx' -Arguments @('--offline','--no-install','rayfin','env','--framework','vite') -Directory $stage
+        Invoke-Checked -Program 'npx' -Arguments @('--offline','--no-install','rayfin','up','--workspace-id',$workspaceId,
             '--tenant',$script:Config.tenantId,'--item-name',$appName,'-y') -Directory $stage
-        Invoke-Checked -Program 'npx' -Arguments @('--no-install','rayfin','up','status') -Directory $stage
+        Invoke-Checked -Program 'npx' -Arguments @('--offline','--no-install','rayfin','up','status') -Directory $stage
     } finally { $env:RAYFIN_TOKEN = $previousToken }
     New-DemoResult 'DEPLOY.APPLIED' 'Warning' 'Deployment commands completed. Actual app image retrieval, SQL rows, review persistence and unauthorized-identity access still require fabric:smoke.'
 } catch {

@@ -1,0 +1,31 @@
+{
+  "name": "AssayScope research context",
+  "status": "Domain intent for the deployed, generated TMDL ontology; this JSON is not itself a Fabric API payload",
+  "targetExperience": "Fabric IQ Ontology new TMDL experience",
+  "namespace": "AssayScopeResearch",
+  "entities": [
+    {"name": "Experiment", "sourceTable": "assayscope_knowledge_experiments", "key": ["experiment_id"], "meaning": "Declared research question, assay and synthetic origin"},
+    {"name": "Acquisition", "sourceTable": "assayscope_knowledge_runs", "key": ["run_key"], "meaning": "A declared acquisition run, not an independent biological replicate"},
+    {"name": "WellMeasurement", "sourceTable": "assayscope_knowledge_wells", "key": ["well_key"], "meaning": "One 2D screen measurement per technical well and run"},
+    {"name": "Image", "sourceTable": "assayscope_knowledge_images", "key": ["image_key"], "meaning": "A canonical acquisition with physical metadata and source hash"},
+    {"name": "QCObservation", "sourceTable": "assayscope_knowledge_qc", "key": ["well_key"], "meaning": "Recorded image-property flags and the thresholds that produced them"},
+    {"name": "ExternalLabRecord", "sourceTable": "assayscope_knowledge_context", "key": ["context_key"], "meaning": "A fictional LIMS/ELN export record; no live external source is configured", "contract": "contracts/lab-context.schema.json"},
+    {"name": "ConditionSummary", "sourceTable": "assayscope_knowledge_conditions", "key": ["condition_key"], "meaning": "Validated within-run QC sensitivity and technical-well accounting"}
+  ],
+  "relationships": [
+    {"name": "AcquisitionInExperiment", "from": "Acquisition", "to": "Experiment", "pairs": [["experiment_id", "experiment_id"]]},
+    {"name": "MeasurementInAcquisition", "from": "WellMeasurement", "to": "Acquisition", "pairs": [["run_key", "run_key"]]},
+    {"name": "MeasurementUsesImage", "from": "WellMeasurement", "to": "Image", "pairs": [["image_key", "image_key"]]},
+    {"name": "QCForMeasurement", "from": "QCObservation", "to": "WellMeasurement", "pairs": [["well_key", "well_key"]]},
+    {"name": "ContextForMeasurement", "from": "ExternalLabRecord", "to": "WellMeasurement", "pairs": [["well_key", "well_key"]], "status": "Deployed example-only export mapping; no live LIMS"},
+    {"name": "ConditionInAcquisition", "from": "ConditionSummary", "to": "Acquisition", "pairs": [["run_key", "run_key"]]}
+  ],
+  "rules": [
+    "Data origin is independent of hosting location.",
+    "Technical wells, objects, timepoints and biological replicates are different units.",
+    "QC observations are not causal diagnoses; public reference studies are not screening treatments.",
+    "No automatic relationship is inferred from filenames, colors or similar specimen names.",
+    "Never include private ReviewDecision rows in a shared ontology or agent without a separate reviewed entitlement design.",
+    "A source relationship does not grant permission to access that source."
+  ]
+}

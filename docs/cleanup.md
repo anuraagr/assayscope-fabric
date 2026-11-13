@@ -39,8 +39,11 @@ Then explicitly confirm the configured environment slug:
 npm run fabric:cleanup -- --config config/tenant.local.json --confirm-delete research-demo
 ```
 
-The command rechecks each live item's identity/name and deletes the recorded app before
-its demo-created dedicated Lakehouse. A renamed or mismatched item stops cleanup.
+The command rechecks each live item's identity/name and deletes recorded data-agent
+and ontology items, then the research notebook and app, before its demo-created
+dedicated Lakehouse. A renamed or
+mismatched item stops cleanup. Review active notebook jobs and preserve any outputs
+needed for evidence before confirming deletion.
 It does not delete a workspace, a capacity, roles, tenant-wide settings, or adopted
 pre-existing items.
 

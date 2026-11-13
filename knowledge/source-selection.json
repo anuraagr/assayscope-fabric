@@ -1,0 +1,18 @@
+{
+  "status": "Source-selection intent used to generate the deployed data-agent definition; tenant coordinates remain ignored",
+  "allowedSource": "The existing dedicated AssayScope Lakehouse",
+  "tables": [
+    "assayscope_knowledge_experiments", "assayscope_knowledge_runs", "assayscope_knowledge_wells",
+    "assayscope_knowledge_qc", "assayscope_knowledge_images", "assayscope_knowledge_conditions",
+    "assayscope_knowledge_context"
+  ],
+  "externalSource": {
+    "state": "not-connected",
+    "kind": "Reviewed LIMS/ELN export or read-only API",
+    "requiredContract": "contracts/lab-context.schema.json",
+    "examplesAreLiveData": false
+  },
+  "excluded": ["ReviewDecision", "private annotations", "generator truth", "public images as treatment data"],
+  "publication": "Inside the authorized tenant only; no anonymous sharing or automatic access grants",
+  "definitionReference": "https://learn.microsoft.com/en-us/rest/api/fabric/articles/item-management/definitions/data-agent-definition"
+}

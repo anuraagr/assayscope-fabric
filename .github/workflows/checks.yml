@@ -37,11 +37,18 @@ jobs:
           npm run lint
           npm test
           npm run build
+          npm run repo:check
+          npm run test:repository
       - name: Scientific and local API checks
         run: |
           .venv/bin/python -m assayscope.generator
           .venv/bin/python -m pytest
-          .venv/bin/python -m ruff check assayscope tests scripts
+          .venv/bin/python -m ruff check assayscope research tests scripts
+          .venv/bin/python -m scripts.build_research_notebook --check
+          .venv/bin/python -m assayscope.ingest
+          .venv/bin/python -m research.review
+          .venv/bin/python -m research.context
+          .venv/bin/python -m research.knowledge
       - name: Compile tenant adapter without cloud access
         working-directory: rayfin/functions
         run: |
@@ -54,10 +61,14 @@ jobs:
         run: |
           .venv/bin/python -m playwright install --with-deps chromium
           .venv/bin/python scripts/verify_browser.py --software-webgl --record
+          .venv/bin/python scripts/verify_docs.py
       - name: Guarded offline deployment checks
         run: |
           pwsh -NoLogo -NoProfile -File scripts/verify_deployment.ps1
+          pwsh -NoLogo -NoProfile -File scripts/verify_knowledge.ps1
           npm run fabric:plan -- --offline
+          npm run fabric:research:plan -- --offline
+          npm run fabric:knowledge:plan -- --offline
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
@@ -67,6 +78,9 @@ jobs:
             dist
             test-results/browser-acceptance.json
             test-results/deployment-local.json
+            test-results/knowledge-local.json
             test-results/verified-evidence.zip
             test-results/walkthrough.webm
+            test-results/research
+            test-results/documentation/acceptance.json
             docs/screenshots

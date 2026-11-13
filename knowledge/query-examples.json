@@ -1,0 +1,27 @@
+[
+  {
+    "id": "run-accounting",
+    "question": "How many wells are included and excluded in each run, and how variable are the included controls?",
+    "query": "SELECT TOP (50) experiment_id, data_origin, run_id, total_wells, included_wells, excluded_wells, unmeasured_wells, included_control_wells, control_median_adu, control_cv_percent, qc_thresholds_json, code_version FROM dbo.assayscope_knowledge_runs WHERE experiment_id = 'spheroid-screen-001' ORDER BY run_id;"
+  },
+  {
+    "id": "qc-sensitivity",
+    "question": "What changes after QC for the three fictional compounds at 10 micromolar in run 1?",
+    "query": "SELECT TOP (50) experiment_id, data_origin, run_id, compound, dose_um, measured_technical_wells, included_technical_wells, estimable_n, all_measured_mean_percent, included_mean_percent, included_sd_percent, change_percentage_points, included_well_ids_json, qc_thresholds_json, code_version FROM dbo.assayscope_knowledge_conditions WHERE experiment_id = 'spheroid-screen-001' AND run_id = 'run1' AND dose_um = 10 ORDER BY compound;"
+  },
+  {
+    "id": "flagged-context",
+    "question": "Which flagged wells in run 1 have an external example sample or protocol record, and which context is missing?",
+    "query": "SELECT TOP (50) w.experiment_id, w.data_origin, w.run_id, w.well_id, w.flags, w.source_image_id, w.source_sha256, c.external_record_id, c.record_version, c.sample_id, c.batch_id, c.protocol_id, c.protocol_version, c.connection_state, c.exported_at FROM dbo.assayscope_knowledge_wells w LEFT JOIN dbo.assayscope_knowledge_context c ON w.well_key = c.well_key WHERE w.experiment_id = 'spheroid-screen-001' AND w.run_id = 'run1' AND w.flagged = 1 ORDER BY w.well_id;"
+  },
+  {
+    "id": "external-context",
+    "question": "Which LIMS record is linked to run1-F11?",
+    "query": "SELECT TOP (1) w.experiment_id, w.data_origin, w.run_id, w.well_id, w.source_image_id, w.source_sha256 AS image_sha256, c.external_record_id, c.record_version, c.source_system, c.connection_state, c.sample_id, c.batch_id, c.protocol_id, c.protocol_version, c.record_url, c.exported_at, c.snapshot_sha256 FROM dbo.assayscope_knowledge_wells w LEFT JOIN dbo.assayscope_knowledge_context c ON w.well_key = c.well_key WHERE w.experiment_id = 'spheroid-screen-001' AND w.well_id = 'run1-F11' ORDER BY w.well_id;"
+  },
+  {
+    "id": "selected-lineage",
+    "question": "Show the source evidence and external example context for run1-F11.",
+    "query": "SELECT TOP (1) w.experiment_id, w.data_origin, w.run_id, w.well_id, w.compound, w.dose_um, w.flags, w.included, w.integrated_signal_adu, w.normalized_percent, i.image_id, i.sha256, i.axes, i.voxel_um_json, i.times_hours_json, i.analysis, i.code_version, c.external_record_id, c.record_version, c.sample_id, c.protocol_id, c.protocol_version, c.connection_state, c.exported_at FROM dbo.assayscope_knowledge_wells w JOIN dbo.assayscope_knowledge_images i ON w.image_key = i.image_key LEFT JOIN dbo.assayscope_knowledge_context c ON w.well_key = c.well_key WHERE w.experiment_id = 'spheroid-screen-001' AND w.well_id = 'run1-F11' ORDER BY w.well_id;"
+  }
+]

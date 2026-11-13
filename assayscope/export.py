@@ -84,7 +84,7 @@ def evidence_bundle(root: Path, catalog: dict, well: dict, options: dict, review
 img{{image-rendering:auto;max-width:500px;background:#070d17;width:100%}}
 small{{color:#40566a}}pre{{white-space:pre-wrap;overflow-wrap:anywhere}}
 table{{border-collapse:collapse}}td,th{{padding:8px;border:1px solid #c8d7e2}}</style>
-<h1>AssayScope | Evidence, not just an image</h1>
+<h1>AssayScope evidence report</h1>
 <p><strong>{esc(catalog['experiment']['disclosure'])}</strong></p>
 <h2>{esc(well['compound'])} / {well['doseUm']:g} uM / {esc(well['id'])}</h2>
 <p>{esc(catalog['experiment']['question'])}</p>

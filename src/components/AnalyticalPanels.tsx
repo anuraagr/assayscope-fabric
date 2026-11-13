@@ -10,7 +10,7 @@ export function ResponsePanel({ analysis, onSelect }: { analysis: Analysis; onSe
   const x = (dose: number) => 64 + (Math.log10(dose) + 2) / Math.log10(3000) * (width - 100);
   const y = (value: number) => height - 50 - Math.min(130, Math.max(0, value)) / 130 * (height - 82);
   return <section className="analysis-surface">
-    <span className="eyebrow">RESPONSE &amp; EVIDENCE</span><h2>A lower signal is a question.<br />Not a conclusion.</h2>
+    <span className="eyebrow">RESPONSE &amp; EVIDENCE</span><h2>Reporter response by concentration</h2>
     <p>Each dot is one technical well. Lines connect arithmetic means, not fitted response curves.
       Error bars show sample standard deviation when n &gt; 1.</p>
     <div className="plot-legend">{Object.entries(COLORS).map(([name, color]) => <span key={name}><i style={{ background: color }} />{name}</span>)}</div>
@@ -39,7 +39,7 @@ export function ResponsePanel({ analysis, onSelect }: { analysis: Analysis; onSe
     </svg>
     <div className="method-callout"><b>IC50: not estimable</b><span>{analysis.fit.replace('Not estimable: ', '')}</span></div>
     <div className="response-foot"><div><h3>Normalization</h3><p>{analysis.formula}.</p><small>{analysis.controlN} included vehicle wells; median {format(analysis.controlMedian, 0)} integrated ADU.</small></div>
-      <div><h3>Inclusion is explicit</h3><p>{analysis.included} included, {analysis.excluded.length} excluded, {analysis.unmeasured} unmeasured.</p><small>{analysis.nDefinition}. No biological-replicate inference.</small></div></div>
+      <div><h3>Well inclusion</h3><p>{analysis.included} included, {analysis.excluded.length} excluded, {analysis.unmeasured} unmeasured.</p><small>{analysis.nDefinition}. No biological-replicate inference.</small></div></div>
     <details><summary>Replicate accounting by concentration</summary><table className="data-table"><thead><tr><th>Compound</th><th>µM</th><th>n</th><th>Mean (%)</th><th>SD</th></tr></thead>
       <tbody>{analysis.groups.map(g => <tr key={`${g.compound}-${g.doseUm}`}><td>{g.compound}</td><td>{g.doseUm}</td><td>{g.n}</td><td>{format(g.mean)}</td><td>{format(g.sd)}</td></tr>)}</tbody></table></details>
   </section>;
@@ -50,7 +50,7 @@ export function QualityPanel({ analysis, catalog, run, onSelect }: {
 }) {
   const flagged = catalog.wells.filter(w => analysis.flags[w.id]?.length && w.runId === run);
   return <section className="analysis-surface">
-    <span className="eyebrow">LAB QUALITY / TWO SIMULATED ACQUISITIONS</span><h2>Before trusting a hit,<br />trust the acquisition.</h2>
+    <span className="eyebrow">LAB QUALITY / TWO SIMULATED ACQUISITIONS</span><h2>Acquisition quality by run</h2>
     <p>These checks are computed from pixels, not generator labels. A QC association is a reason to investigate,
       not proof of an instrument fault or a biological effect.</p>
     <div className="run-comparison">{analysis.crossRun.map(r => <button key={r.runId} onClick={() => onSelect('F11', r.runId)}>
@@ -73,7 +73,7 @@ export function QualityPanel({ analysis, catalog, run, onSelect }: {
 
 export function ProvenancePanel({ catalog, well }: { catalog: Catalog; well: Well }) {
   return <section className="analysis-surface">
-    <span className="eyebrow">PROVENANCE / EVIDENCE CHAIN</span><h2>Every measurement<br />has a way back.</h2>
+    <span className="eyebrow">PROVENANCE</span><h2>Source images and analysis methods</h2>
     <div className="trace-chain">{['Experiment', 'Acquisition', 'Source image', 'CPU analysis', 'Research review'].map((s, i) =>
       <span key={s}><b>{s}</b><small>{[catalog.experiment.id, well.runId, well.image.id, catalog.provenance.analysis, 'Human-authored rationale'][i]}</small></span>)}</div>
     <h3><Fingerprint size={19} />Selected source</h3>
@@ -89,7 +89,7 @@ export function ProvenancePanel({ catalog, well }: { catalog: Catalog; well: Wel
     </dl>
     <h3>Method parameters</h3><dl className="provenance-grid">{Object.entries(catalog.provenance.parameters).map(([key, value]) =>
       <div className="contents" key={key}><dt>{key}</dt><dd>{typeof value === 'string' || typeof value === 'number' ? value : JSON.stringify(value)}</dd></div>)}</dl>
-    <div className="method-callout"><b>Originals stay intact</b><span>Display controls do not alter analysis. Labels are derived, not ground truth.
+    <div className="method-callout"><b>Data preservation</b><span>Display controls do not alter analysis. Labels are derived, not ground truth.
       Generator truth is stored separately and never served to the workbench.</span></div>
     <h3>References</h3>{catalog.provenance.citations.map(c => c.startsWith('https://')
       ? <p key={c}><a href={c} target="_blank" rel="noreferrer">{c} <ExternalLink size={12} /></a></p> : <p key={c}>{c}</p>)}

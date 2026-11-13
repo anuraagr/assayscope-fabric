@@ -4,6 +4,9 @@ Read AGENTS.md and docs/scientific-method.md. Keep the product research-only and
 the synthetic/public/connected boundaries explicit. Never infer drug metadata,
 biology or channel identities from a color or a filename.
 
+Use factual scientific labels and descriptions. Do not add marketing taglines,
+slogans or sales language to the UI, reports or documentation.
+
 The local adapter is FastAPI/files/SQLite, not a local managed Rayfin backend.
 Cloud code uses documented Fabric/Rayfin 1.36.2 APIs, explicit entity permissions
 and protected hosting. Missing tenant configuration/authentication fails closed.
@@ -25,3 +28,12 @@ for behavioral changes. Record the browser/hardware/timings and cloud checks
 independently. Use the existing scripts and tests; don't add unnecessary services.
 PowerShell scripts are ASCII and use subscription-guarded Invoke-DemoAz and redacting
 Write-DemoLog. Never commit bulk data, credentials or per-tenant state.
+
+Keep `/data/` generated and ignored, but retain required `rayfin/data/` schema source.
+Run `npm run repo:check` and `npm run test:repository` for portable handoffs.
+Include `research` in Ruff checks and regenerate the output-free research notebook
+with `python -m scripts.build_research_notebook`; diagrams use `npm run docs:diagrams`.
+The deployed ontology/data agent share curated Lakehouse tables; do not imply a direct
+ontology tool binding. The LIMS/ELN records remain fictional export examples, not a live
+external connection. Verify exact source allowlists, definition/SQL readback and actual
+model responses independently. Keep private review rows out of shared agents.

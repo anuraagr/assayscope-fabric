@@ -13,6 +13,7 @@ import sys
 import tempfile
 import time
 import zipfile
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -23,6 +24,23 @@ from PIL import Image
 from playwright.sync_api import expect, sync_playwright
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+@contextmanager
+def isolated_store(report_dir):
+    directory = tempfile.TemporaryDirectory(prefix="browser-state-", dir=report_dir)
+    try:
+        yield directory.name
+    finally:
+        for attempt in range(5):
+            try:
+                directory.cleanup()
+                break
+            except PermissionError:
+                if sys.platform != "win32" or attempt == 4:
+                    raise
+                print("Waiting for Windows to release the isolated test-store file handles.")
+                time.sleep(1)
 
 
 def set_range(page, label, value):
@@ -107,7 +125,7 @@ def main():
         results["gates"].append({"gate": number, "status": "Pass", "evidence": detail})
         print(f"Gate {number}: Pass | {detail}")
 
-    with tempfile.TemporaryDirectory(prefix="browser-state-", dir=report_dir) as temporary:
+    with isolated_store(report_dir) as temporary:
         server = Server(Path(temporary))
         server.start()
         results["sourceHashes"]["data/core/catalog.json"] = hashlib.sha256(

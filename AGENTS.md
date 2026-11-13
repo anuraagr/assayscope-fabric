@@ -3,18 +3,22 @@
 This is an independent microscopy research demo. Read README, docs/scientific-method.md,
 docs/deployment.md and docs/security.md before changing behavior.
 
+Use factual scientific labels and descriptions in the UI, exports and documentation.
+Do not add marketing taglines, slogans or sales language.
+
 ## Run and verify
 
 - Local, no cloud: `docker compose up --build` or the README's Python 3.12/Node 24
   setup followed by `npm run dev`. `npm run dev` is not `rayfin dev`.
 - Frontend: `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`.
 - Python: `.venv/Scripts/python.exe -m pytest` and
-  `.venv/Scripts/python.exe -m ruff check assayscope tests scripts` on Windows;
+  `.venv/Scripts/python.exe -m ruff check assayscope research tests scripts` on Windows;
   use `.venv/bin/python` on macOS/Linux.
 - Browser: `scripts/verify_browser.py --edge --record` on Windows with Edge, or
   `--software-webgl` with installed Playwright Chromium. It owns an isolated server/store.
 - Cloud code: `npm ci` and `npm run build` in `rayfin/functions`.
 - Offline plan: `npm run fabric:plan -- --offline`.
+- Local deployment guards: `pwsh -NoLogo -NoProfile -File scripts/verify_deployment.ps1`.
 
 ## Invariants
 
@@ -50,3 +54,19 @@ No custom slash command, external agent framework or model service is required.
 Update docs/progress.md and docs/verification.md with actual evidence and remaining gates.
 Do not claim Docker/cloud/another platform was tested when it was not. Keep direct and
 transitive dependency changes scoped, pinned and covered by the scientific/browser tests.
+
+## Portable research extensions
+
+The root `/data/` is generated content; `rayfin/data/` is required schema source.
+Run `npm run repo:check` and `npm run test:repository` before source packaging.
+Research helpers live in `research/`; include that directory in Ruff checks.
+Regenerate the output-free notebook with `python -m scripts.build_research_notebook`.
+Diagrams are generated together as SVG and editable Excalidraw with `npm run docs:diagrams`.
+
+The LIMS/ELN context join is an offline example, not a live external connector.
+`knowledge/` holds intent, instructions and evaluation cases used by the deployed
+generation-2 ontology and read-only data agent. They share curated Lakehouse tables;
+do not imply a direct ontology tool binding. Keep exact source selection and private
+review exclusion. Live LIMS/ELN remains unconnected without a supplied authorized endpoint.
+Run `scripts/verify_knowledge.ps1`, knowledge projection tests and actual definition/SQL
+checks for changes; collected model answers still need independent scientific evaluation.

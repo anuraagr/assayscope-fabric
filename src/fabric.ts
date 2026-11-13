@@ -21,12 +21,21 @@ export function requireFabricConfig(env: Record<string, string | undefined>) {
   const missing = required.filter(key => !env[key]);
   if (missing.length) throw new Error(`Missing tenant configuration: ${missing.join(', ')}. No local fallback.`);
   const url = new URL(env.VITE_RAYFIN_API_URL!);
-  if (url.protocol !== 'https:' || !(url.hostname.endsWith('.rayfin.windows.net') || url.hostname.endsWith('.fabric.microsoft.com')) ||
-      url.username || url.password || url.search || url.hash)
+  const dedicatedHost = url.hostname.endsWith('.pbidedicated.windows.net');
+  if (url.protocol !== 'https:' || !(url.hostname.endsWith('.rayfin.windows.net') || url.hostname.endsWith('.fabric.microsoft.com') || dedicatedHost) ||
+      url.port || url.username || url.password || url.search || url.hash)
     throw new Error('The configured app endpoint must be a protected HTTPS Rayfin endpoint.');
   const guid = /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
   if (!guid.test(env.VITE_FABRIC_WORKSPACE_ID!) || !guid.test(env.VITE_FABRIC_ITEM_ID!))
     throw new Error('The workspace and app identifiers must be resolved GUIDs.');
+  if (dedicatedHost) {
+    const coordinates = /^\/webapi\/capacities\/([0-9a-f-]+)\/workloads\/BaaS\/BaaSService\/automatic\/v1\/workspaces\/([0-9a-f-]+)\/appbackends\/([0-9a-f-]+)\/?$/i.exec(url.pathname);
+    if (!coordinates || !guid.test(coordinates[1]) ||
+        url.hostname !== `${coordinates[1].replaceAll('-', '').toLowerCase()}.pbidedicated.windows.net` ||
+        coordinates[2].toLowerCase() !== env.VITE_FABRIC_WORKSPACE_ID!.toLowerCase() ||
+        coordinates[3].toLowerCase() !== env.VITE_FABRIC_ITEM_ID!.toLowerCase())
+      throw new Error('The dedicated Fabric endpoint does not match the configured capacity, workspace and app.');
+  }
   return {
     baseUrl: url.toString(), publishableKey: env.VITE_RAYFIN_PUBLISHABLE_KEY!,
     workspaceId: env.VITE_FABRIC_WORKSPACE_ID!, projectId: env.VITE_FABRIC_ITEM_ID!,
@@ -45,6 +54,39 @@ function isReview(input: unknown): input is Review {
 function readReview(raw: unknown) {
   if (!isReview(raw)) throw new Error('Fabric returned an invalid review record.');
   return raw;
+}
+function functionJson(value: unknown): unknown {
+  // Rayfin 1.36 may already decode a handler's JSON string before returning it.
+  return typeof value === 'string' ? JSON.parse(value) : value;
+}
+function record(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
+const nullableNumber = (value: unknown) => value === null || finite(value);
+const count = (value: unknown) => finite(value) && Number.isInteger(value) && value >= 0;
+const strings = (value: unknown): value is string[] => Array.isArray(value) && value.every(v => typeof v === 'string');
+function isAnalysis(value: unknown): value is Analysis {
+  if (!record(value) || !record(value.thresholds) || !record(value.normalized) || !record(value.flags)) return false;
+  return count(value.included) && count(value.unmeasured) && count(value.controlN) &&
+    strings(value.excluded) && nullableNumber(value.controlMedian) &&
+    Object.values(value.normalized).every(nullableNumber) && Object.values(value.flags).every(strings) &&
+    ['formula', 'nDefinition', 'fit'].every(key => typeof value[key] === 'string') &&
+    finite(value.thresholds.focusMin) && finite(value.thresholds.saturationMax) &&
+    finite(value.thresholds.illuminationMax) && count(value.thresholds.objectCountMin) &&
+    Array.isArray(value.groups) && value.groups.every(group => record(group) &&
+      typeof group.compound === 'string' && finite(group.doseUm) && count(group.n) &&
+      strings(group.wellIds) && Array.isArray(group.points) && group.points.every(finite) &&
+      group.points.length === group.n && group.wellIds.length === group.n &&
+      nullableNumber(group.mean) && nullableNumber(group.sd)) &&
+    Array.isArray(value.crossRun) && value.crossRun.length > 0 && value.crossRun.every(run => record(run) &&
+      typeof run.runId === 'string' && typeof run.instrument === 'string' &&
+      count(run.flagged) && count(run.total) && finite(run.medianFocus));
+}
+export function readCloudAnalysis(raw: unknown): Analysis {
+  const result = functionJson(raw);
+  if (!isAnalysis(result)) throw new Error('Analytical query returned an invalid result.');
+  return result;
 }
 function decodeBase64(text: string) {
   if (text.length > 4 * 1024 * 1024) throw new Error('Image response exceeds the bounded delivery limit.');
@@ -80,17 +122,13 @@ export function createFabricSession(): FabricSession {
       demandSession(); signal?.throwIfAborted();
       const text = await client.functions.catalog.invoke(undefined, { timeoutMs: 30000 });
       signal?.throwIfAborted();
-      return validateCatalog(JSON.parse(text));
+      return validateCatalog(functionJson(text));
     },
     async analyze(options, signal) {
       demandSession(); signal?.throwIfAborted();
       const text = await client.functions.analyze.invoke({ optionsJson: JSON.stringify(options) }, { timeoutMs: 45000 });
       signal?.throwIfAborted();
-      const result: Analysis = JSON.parse(text);
-      if (!Number.isInteger(result.included) || !Array.isArray(result.groups) || !result.flags ||
-          !result.crossRun || result.crossRun.length === 0)
-        throw new Error('Analytical query returned an invalid result.');
-      return result;
+      return readCloudAnalysis(text);
     },
     async frame(asset, time, signal) {
       demandSession(); signal?.throwIfAborted();
@@ -116,7 +154,7 @@ export function createFabricSession(): FabricSession {
     },
     async saveReview(well, review) {
       const user = demandSession();
-      return readReview(JSON.parse(await client.functions.saveReview.invoke({
+      return readReview(functionJson(await client.functions.saveReview.invoke({
         userId: user.id, wellId: well, state: review.state, rationale: review.rationale,
         annotation: review.annotation, expectedVersion: review.version,
       }, { timeoutMs: 30000 })));

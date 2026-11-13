@@ -18,11 +18,12 @@ if (!baseUrl || !publishableKey || !baseUrl.startsWith('https://')) {
   process.exit(1);
 }
 const report = (check, status, detail) => process.stdout.write(`${check} | ${status} | ${detail}\n`);
+const functionJson = value => typeof value === 'string' ? JSON.parse(value) : value;
 const client = new RayfinClient({ baseUrl, publishableKey, authStorage: false, persistSession: false });
 try {
   const session = await signInWithEntraToken(client.auth, { entraToken: process.env.RAYFIN_TOKEN });
   if (!session.isAuthenticated || !session.user) throw new Error('No authenticated app session.');
-  const catalog = JSON.parse(await client.functions.catalog.invoke(undefined, { timeoutMs: 30000 }));
+  const catalog = functionJson(await client.functions.catalog.invoke(undefined, { timeoutMs: 30000 }));
   if (catalog.experiment?.id !== 'spheroid-screen-001' || catalog.wells?.length !== 192)
     throw new Error('Remote experiment is missing or has unexpected dimensions.');
   report('CLOUD.CATALOG.AUTH', 'Pass', 'Authenticated manifest returned the registered experiment.');
@@ -34,7 +35,7 @@ try {
   if (createHash('sha256').update(frame).digest('hex') !== image.frameHashes[0])
     throw new Error('Remote frame checksum differs from the authorized manifest.');
   report('CLOUD.IMAGE.AUTH', 'Pass', `OneLake image retrieved and hash verified (${frame.length} bytes).`);
-  const analysis = JSON.parse(await client.functions.analyze.invoke({
+  const analysis = functionJson(await client.functions.analyze.invoke({
     optionsJson: JSON.stringify({
       runId: 'run1', excludeQC: true,
       thresholds: { focusMin: 0.025, saturationMax: 0.015, illuminationMax: 0.55, objectCountMin: 12 },
@@ -46,7 +47,7 @@ try {
   if (process.argv.includes('--write-review')) {
     const previous = await client.data.ReviewDecision.select(['id', 'version']).where({ well_id: { eq: well.id } })
       .orderBy({ updated_at: 'desc' }).first(1).execute();
-    const saved = JSON.parse(await client.functions.saveReview.invoke({
+    const saved = functionJson(await client.functions.saveReview.invoke({
       userId: session.user.id, wellId: well.id, state: 'Investigate',
       rationale: 'Authorized deployment smoke test of synthetic evidence; not a scientific conclusion.',
       annotation: 'Smoke-test revision, append-only. Preserve earlier human reviews.',

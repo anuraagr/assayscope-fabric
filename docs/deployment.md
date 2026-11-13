@@ -2,10 +2,38 @@
 
 ## Status and boundaries
 
-The local product is runnable without cloud access. The Fabric path is implemented,
-compiled and guarded, but **has not been deployed into an authorized tenant**.
-No actual authenticated OneLake read, SQL query, cloud review persistence or
-second-identity authorization result is claimed from local mocks.
+The local product has no cloud dependency. The authorized tenant deployment now runs
+in its dedicated workspace on the existing F4: protected AppBackend, Functions,
+transactional review schema, separate Lakehouse, 3,289 uploaded files and five analytical
+tables. The actual Fabric SSO UI loaded the volume and SQL-derived QC/response results,
+and exported a matching evidence ZIP. Anonymous hosting and Functions requests returned
+HTTP 401. Cloud review writes and a different signed-in identity were not tested.
+
+The initial deployment needed **Enable Fabric App Items (preview)** (`AppBackendTenant`)
+enabled by the operator at capacity scope. This is distinct from allowing public-facing
+apps. Tenant IDs, deployment receipts and actual URLs stay in ignored environment state.
+Deployment scripts do not change policy, roles, capacity size or sign-in context.
+
+### Enable app creation at the intended scope
+
+An authorized administrator can enable the exact creation setting for approved users.
+If `delegateToCapacity` is already true, as it is in the inspected target, the narrower
+supported route is **Capacity settings > Fabric capacity > intended capacity >
+Delegated tenant settings > Enable Fabric App Items (preview)**. Select **Override
+tenant admin selection**, enable it for approved users/security groups and apply.
+This changes policy for that capacity, not just one workspace; review that scope first.
+
+The documented REST equivalent is
+[Update Capacity Tenant Setting Override](https://learn.microsoft.com/en-us/rest/api/fabric/admin/tenants/update-capacity-tenant-setting-override).
+Read the current setting and preserve group restrictions/exclusions. This repository's
+deployment scripts never make that policy change. The agent needs explicit permission
+before doing so. In this deployment, the operator made the change directly.
+
+Leave anonymous data access off and keep `staticHosting.assetAccess: protected`.
+The existing public-facing-app permission is not needed and is not automatically
+changed. Tenant settings can take
+[up to 15 minutes to propagate](https://learn.microsoft.com/en-us/fabric/admin/about-tenant-settings).
+Verify the effective creation setting, then reuse the existing workspace for deployment.
 
 The deployment uses documented Fabric REST APIs and Rayfin **1.36.2**, not ARM/Bicep
 for Fabric items. All Rayfin packages use the same exact version. Rayfin development
@@ -15,7 +43,7 @@ uses `scripts/dev.mjs` and FastAPI instead.
 ## Prerequisites and intended target
 
 Use Node 24, Python 3.12 with `requirements.txt`, npm, PowerShell 7.4+ and Azure CLI.
-Run npm install/ci in the app root and `npm ci` in `rayfin/functions`.
+Run `npm ci` in the app root and `npm ci` in `rayfin/functions`.
 PowerShell is required on macOS/Linux for the same guarded deployment entry point.
 
 Supply a **specific existing** Fabric workspace and assigned active capacity.
@@ -36,10 +64,16 @@ Copy [tenant.example.json](../config/tenant.example.json) to
 capacityId, subscriptionId and expectedAccount. The subscription is a guard for Azure
 CLI; Fabric/OneLake ownership remains tenant/workspace-scoped.
 The expected account must match `az account show --subscription <configured-id>`.
+Token acquisition also retains `--subscription`; it does not combine it with Azure CLI's
+mutually exclusive `--tenant` option. The returned tenant and subscription are checked
+before the token is used.
 
 The five `...Confirmed` booleans are **operator attestations**, not a claim that the
 tool can read privileged tenant-admin settings. Leave them false until the relevant
 owner verifies Apps/Functions availability, workspace role and app-identity data access.
+They must be actual JSON booleans; text such as `"false"` is rejected. Optional app and
+Lakehouse IDs must be empty strings or nonempty GUIDs. A configured item cannot silently
+replace a different item in the recorded environment state.
 The tool reports these as Manual action required. It does not set tenant-wide policy
 or grant itself permissions. An inaccessible capacity/permission check fails closed.
 
@@ -64,9 +98,13 @@ For code/configuration checks with no target or sign-in:
 
 ```sh
 npm run fabric:plan -- --offline
+pwsh -NoLogo -NoProfile -File scripts/verify_deployment.ps1
 ```
 
 Offline mode makes **no cloud request** and does not prove availability or authorization.
+A separate no-network test harness covers local config/identity guards, retry/LRO failures,
+cleanup ownership and upload selection. Its report is `test-results/deployment-local.json`;
+test doubles are not evidence of live tenant behavior.
 A real plan checks the intended context, workspace and active capacity, lists expected
 resources/cost drivers, and invokes the documented `rayfin up --dry-run` when the Node
 runtime is supported. It does not apply schema or upload assets.
@@ -83,12 +121,22 @@ runtime is supported. It does not apply schema or upload assets.
 6. Uploads canonical OME images, verified frames/labels, NGFF derivatives and table
    inputs under `Files/assayscope/spheroid-screen-001`. Generator truth, public originals,
    local reviews and arbitrary directories are not uploaded.
+   The upload allowlist rejects unrelated files and linked files/directories before
+   requesting a storage token. Authenticated OneLake requests do not follow redirects.
+   Uploads use at most four workers and checkpoint completed hashes. Reruns verify
+   recorded files before reusing them; permission failures are explicit, not replacement data.
 7. Uses the documented **Load Table** writer API with overwrite for idempotent Delta
    tables. The SQL analytics endpoint is never used for transactional writes.
+   A regional `Location` can be returned for an LRO. When `x-ms-operation-id` is present,
+   polling uses the documented canonical `api.fabric.microsoft.com/v1/operations/{id}`
+   route instead of forwarding credentials to a different origin. `Retry-After` is honored.
 8. Stages an environment-specific source copy with resolved resource coordinates.
 9. Uses pinned `rayfin up` to apply the backend, generates frontend environment metadata,
    and performs the full app deploy with **protected** static hosting and authenticated
    functions. No `--force` destructive schema option is used.
+   Schema compilation uses the pinned CLI's `.temp/compiled` output path. Installed
+   dependencies are reused only when the staged lockfile is unchanged and validation
+   succeeds; a changed lockfile (including transitive-only changes) triggers `npm ci`.
 10. Runs `rayfin up status`, but reports that live feature smoke tests are still required.
 
 Canonical sources remain in Lakehouse Files; measurements reference source IDs/hashes.
@@ -96,6 +144,13 @@ The Functions `analyze` handler runs a fixed, parameterized cross-run SQL query 
 rejects image/analytical code-version mismatches during SQL synchronization.
 Only reviews use Rayfin's transactional MSSQL entity. They are private, caller-scoped,
 append-only revisions; no segmented-object dump is stored there.
+
+Lakehouse table creation and SQL endpoint metadata synchronization are separate.
+Allow synchronization to complete and prove SQL rows/provenance, rather than treating
+a table-load acknowledgement as SQL success. A selective
+[SQL metadata refresh](https://learn.microsoft.com/en-us/rest/api/fabric/sqlendpoint/items/refresh-sql-endpoint-metadata)
+can target the five tables with `recreateTables: false`; never drop/recreate tables to
+hide a sync delay. The final deployed query returned all expected rows and matching code hashes.
 
 ## Authenticated image delivery
 
@@ -110,6 +165,11 @@ bounded response sizes and frame SHA-256 validation. Permission denial and expir
 visible errors, not reasons to use local data. Rayfin invocation limits are bounded;
 the browser discards stale results because the documented invocation SDK does not expose
 AbortSignal cancellation. Local HTTP reads are actively aborted.
+
+The actual workload endpoint can use `pbidedicated.windows.net`. The browser accepts
+that HTTPS form only when the capacity host/path and configured workspace/item match.
+The pinned Functions client can return a handler's JSON string already decoded;
+catalog, analysis and review results are validated without parsing objects a second time.
 
 **No SAS is generated.** This avoids assuming tenant delegation policy or direct-storage
 CORS settings. The preflight therefore identifies direct-storage SAS/CORS as Not selected,
@@ -161,6 +221,14 @@ independently:
 Do not treat local tests, a successful deployment command, or a token acquisition as a
 Pass for any unexecuted row above. If an anonymous read succeeds, smoke fails.
 
+On the implementation host, the existing Azure CLI tokens carry `user_impersonation`,
+not the delegated `Item.Execute.All` scope required by direct Entra-to-Rayfin exchange.
+Consequently `fabric:smoke` fails at that exchange; no scopes were granted or sign-in
+automated to suppress it. The separate standard Fabric portal SSO path worked and was
+used for actual app image/analysis/export checks. Scripted smoke requires an already
+authorized delegated token with the documented scope. A failed scripted sign-in is
+not proof that the Fabric SSO application is unavailable.
+
 ## Reruns, another tenant and cleanup
 
 State is ignored and scoped as:
@@ -176,6 +244,8 @@ The source checkout never receives developer-specific tenant IDs. Reruns reuse r
 items and overwrite only the dedicated analytical tables. A per-prefix owner marker
 prevents cross-environment replacement. Lost state is not permission to create duplicates:
 same-name collisions require explicit identity review.
+The marker is checked against tenant, workspace and environment, and creation uses a
+conditional write so a concurrent claimant is not overwritten.
 
 To redeploy elsewhere, create a **new ignored config** with the other tenant/workspace/
 capacity/account and a new environment slug. Complete that identity's sign-in yourself,
@@ -192,6 +262,15 @@ existing tenant's resources. Storage persists when compute is not being used; so
 items can remain under retention. No model is deployed or called. There are no hard-coded
 prices, free-deployment guarantees or unmeasured deployment-time promises.
 
+The [optional research notebook](fabric-research.md) is deployed separately with
+`fabric:research:apply` and executed separately with `fabric:research:run`. It reuses
+the recorded Lakehouse, records its own item/job IDs, checks recent jobs and never
+changes scientific tables or review records. Notebook execution consumes Spark capacity.
+The [ontology/data-agent deployment](knowledge-deployment.md) is a separate explicit
+plan/apply/publish/evaluate sequence. Neither knowledge item nor a live LIMS connector
+is created by the base apply command. The sample knowledge items have been deployed;
+live LIMS/ELN access remains unconnected.
+
 Review the tenant's capacity metrics and current
 [Fabric pricing/capacity documentation](https://learn.microsoft.com/en-us/fabric/enterprise/licenses)
 before apply. Preview availability, response limits and authentication can change.
@@ -200,6 +279,9 @@ The 3 MiB proxy is suitable for this pack, not a scalable whole-slide streaming 
 ## Verified documentation (checked 2026-11-12)
 
 - [Create Fabric Apps](https://learn.microsoft.com/en-us/fabric/apps/create-app)
+- [Exact tenant setting names](https://learn.microsoft.com/en-us/fabric/admin/tenant-settings-index)
+- [Capacity-scoped delegated settings](https://learn.microsoft.com/en-us/fabric/admin/capacity-settings#delegated-tenant-settings)
+- [Current regional availability](https://learn.microsoft.com/en-us/fabric/admin/region-availability)
 - [Rayfin 1.36.2 agent rules](https://rayfin.ai/docs/reference/agent-rules.md)
 - [Managed Fabric backend and permissions](https://microsoft.github.io/rayfin/docs/guide/app-backend/)
 - [Rayfin up, dry-run and status](https://rayfin.ai/docs/reference/cli/up.md)
