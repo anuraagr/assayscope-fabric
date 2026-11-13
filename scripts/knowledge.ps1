@@ -66,6 +66,14 @@ function Assert-KnowledgeReadback {
         }
     }
 }
+function Merge-KnowledgeDraft {
+    param([hashtable]$Desired, [hashtable]$Current)
+    if (@($Desired.parts | Where-Object { $_.path -like 'Files/Config/published/*' -or $_.path -eq 'Files/Config/publish_info.json' }).Count) {
+        throw 'A draft apply cannot replace published configuration.'
+    }
+    $published = @($Current.parts | Where-Object { $_.path -like 'Files/Config/published/*' -or $_.path -eq 'Files/Config/publish_info.json' })
+    return @{parts=@($Desired.parts) + $published}
+}
 function Set-KnowledgeItem {
     param([string]$Type, [string]$Name, [hashtable]$Definition, [array]$Items, [switch]$Published)
     $key = if ($Type -eq 'Ontology') { 'ontologyId' } else { 'dataAgentId' }
@@ -79,6 +87,10 @@ function Set-KnowledgeItem {
         $liveHash = Get-KnowledgeHash $live
         if ($liveHash -ne $script:State.knowledgeDefinitionHashes[$key]) {
             throw 'Knowledge item was edited externally. Preserve and reconcile the live definition before deploying.'
+        }
+        if ($Type -eq 'DataAgent' -and -not $Published) {
+            $Definition = Merge-KnowledgeDraft $Definition $live
+            $desiredHash = Get-KnowledgeHash $Definition
         }
         if ($desiredHash -eq $script:State.knowledgeContentHashes[$key]) {
             Assert-KnowledgeReadback $live $Type -Published:$Published

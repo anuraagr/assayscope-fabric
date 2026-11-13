@@ -34,7 +34,8 @@ exact Rayfin versions. Regression tests cover the ignored-schema defect and acci
 tenant-state inclusion.
 
 Generated data, dependencies, execution outputs and per-tenant state remain ignored.
-A private GitHub repository has been created at `anuraagr/assayscope-fabric`.
+A private GitHub repository has been created and populated at `anuraagr/assayscope-fabric`.
+Its first real Ubuntu Actions run passed, including browser and scientific checks.
 Source publication and hosted-run evidence are tracked separately in verification.
 Application hosting remains protected, not public.
 
@@ -59,7 +60,7 @@ deployment independently of those settings.
 | Cloud review write followed by independent read-back | Not performed without approval for a labeled test record |
 | Separate authenticated unauthorized identity | Not supplied; cross-user denial remains unverified |
 | Direct Entra-to-Rayfin scripted smoke | Current CLI token lacks the required `Item.Execute.All`; portal SSO works independently |
-| Docker build/start; Linux/macOS runtime; 16-GiB machine | Not executed on the Windows implementation host |
+| Docker build/start; macOS; 16-GiB machine | Unverified; Linux software-WebGL CI passed independently |
 | Real assay adaptation | Requires rights, reviewed metadata, method validation and biological replicate design |
 | Managed ontology and data agent | Deployed and exercised; broader scientific evaluation and separate-user authorization remain independent |
 | External LIMS/ELN | No authorized endpoint or mapping supplied; the example stays unconnected |

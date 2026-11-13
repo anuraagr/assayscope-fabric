@@ -1,5 +1,7 @@
 # AssayScope
 
+[![AssayScope checks](https://github.com/anuraagr/assayscope-fabric/actions/workflows/checks.yml/badge.svg)](https://github.com/anuraagr/assayscope-fabric/actions/workflows/checks.yml)
+
 AssayScope is a **research-only microscopy review workbench**. It connects a plate result
 to its source images, measurement method, acquisition-quality observations and human
 review rationale. Run it locally without cloud services, or deploy the protected app
@@ -75,7 +77,8 @@ Run these commands from the root of the independent `assayscope-fabric` reposito
 No other project's deployment scripts or assets are required. Local mode does not sign
 in, create cloud resources or expose a public endpoint.
 
-**Verification boundary:** native Windows execution was tested. Docker was not available
+**Verification boundary:** native Windows and GitHub-hosted Ubuntu checks passed.
+Docker was not available
 on the implementation host, so the actual container build/start is **unverified**.
 The [verification report](docs/verification.md) separates measured results from configuration.
 
@@ -135,7 +138,8 @@ On macOS/Linux replace the Python executable with `.venv/bin/python`.
 | Read-only research report and Fabric notebook | Implemented; same Python reduction, control dispersion, QC sensitivity and source lineage |
 | Fabric IQ ontology and read-only data agent | Deployed against seven curated tables; runtime evidence and remaining gates are recorded separately |
 | LIMS/ELN context | Four explicit fictional export records; no live external endpoint connected |
-| Docker Compose, Linux/macOS runtime | Packaged; actual execution unverified on this Windows host |
+| Linux CI | Actual Ubuntu build/scientific/browser/guard workflow passed; software WebGL is explicit |
+| Docker Compose and macOS runtime | Packaged/documented; actual execution unverified |
 | Optional learned segmentation or Foundry LLM | Not implemented; not needed by the core product |
 | Arbitrary instrument/LIMS connector or clinical validation | Not claimed |
 

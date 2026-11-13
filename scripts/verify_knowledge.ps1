@@ -29,9 +29,10 @@ function Test-Knowledge {
     catch { $script:Results.Add(@{name=$Name; status='Fail'; detail=$_.Exception.Message}); Write-DemoLog "KNOWLEDGE.TEST | Fail | $Name | $($_.Exception.Message)" }
 }
 Test-Knowledge 'Definitions-only import performs no authentication or deployment' {
-    $script:Config = $null
-    $script:FabricToken = ''
-    Assert-True ($null -eq $script:Config -and $script:FabricToken -eq '') 'Import requested a configuration or token.'
+    $output = & pwsh -NoLogo -NoProfile -File (Join-Path $PSScriptRoot 'fabric.ps1') `
+        -Action doctor -ConfigPath '__definitions_only_must_not_read_config__.json' -DefinitionsOnly 2>&1
+    Assert-True ($LASTEXITCODE -eq 0 -and [string]::IsNullOrWhiteSpace(($output -join "`n"))) `
+        'Definitions-only import executed a command or tried to read the deliberately missing config.'
 }
 Test-Knowledge 'Knowledge fingerprints ignore only platform-owned metadata and normalize line endings' {
     $encode = {param($text) [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($text))}
@@ -83,6 +84,19 @@ Test-Knowledge 'Ontology and agent cleanup ownership stay restricted to exact re
     Assert-DemoState $state $config
     $state.created[0].id = $state.dataAgentId
     Assert-Throws { Assert-DemoState $state $config } 'ownership does not match'
+}
+Test-Knowledge 'Rerunning draft apply preserves the existing published agent version' {
+    $draft = @{parts=@(@{path='Files/Config/draft/stage_config.json'; payload='bmV3LWRyYWZ0'})}
+    $current = @{parts=@(
+        @{path='Files/Config/draft/stage_config.json'; payload='b2xkLWRyYWZ0'},
+        @{path='Files/Config/published/stage_config.json'; payload='cHVibGlzaGVk'},
+        @{path='Files/Config/publish_info.json'; payload='aW5mbw'}
+    )}
+    $merged = Merge-KnowledgeDraft $draft $current
+    Assert-True ($merged.parts.Count -eq 3) 'Published agent parts were dropped.'
+    Assert-True ($merged.parts[0].payload -eq 'bmV3LWRyYWZ0' -and $merged.parts[1].payload -eq 'cHVibGlzaGVk') 'Draft and published versions were conflated.'
+    Assert-True ($draft.parts.Count -eq 1 -and $current.parts[0].payload -eq 'b2xkLWRyYWZ0') 'Input definitions were mutated.'
+    Assert-Throws { Merge-KnowledgeDraft $current $current } 'cannot replace published'
 }
 $result = @{executedAt=[DateTime]::UtcNow.ToString('o'); network='None; only fixture definitions and local state.'
     tests=@($script:Results.ToArray()); cloudVerification='Not performed by this script.'}

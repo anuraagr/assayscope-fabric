@@ -51,6 +51,8 @@ been configured and verified.
 
 Apply creates a draft. Publish installs the reviewed version for consumption **inside
 the authorized tenant**; it does not grant access or make anything anonymous.
+Rerunning apply preserves the existing published version while updating its draft;
+only the explicit publish action replaces the published configuration.
 Definition read-back verifies the actual source coordinates and table allowlist.
 External edits stop automatic replacement rather than being overwritten.
 

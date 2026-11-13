@@ -19,7 +19,7 @@ Tenant coordinates, execution receipts and raw logs stay in ignored environment 
 | Ruff | Pass | `assayscope`, `research`, `tests`, `scripts` |
 | Repository/SQL transport regressions | 5 tests passed | Packaging boundaries and exact safe SQL bigint decoding |
 | PowerShell deployment guards | 30 tests passed | No-network guard, failure, notebook ownership/job/receipt cases |
-| PowerShell knowledge guards | 6 tests passed | Definition-only import, source allowlist, ownership and external-edit protection |
+| PowerShell knowledge guards | 7 tests passed | Import, allowlist, ownership, external-edit protection and published-version preservation |
 | Base and research offline plans | Pass | No authentication or cloud calls |
 | Generated notebook freshness | Pass | Embeds the tested shared functions, no outputs or tenant bindings |
 | Documentation/source checks | Pass | Portable local links, diagram freshness, exact Rayfin pins and notebook hygiene |
@@ -56,7 +56,7 @@ behavior passed. Screenshots were captured from the running local app, not fabri
 Host: Windows ARM64, Snapdragon X1E80100, about 32 GiB RAM, integrated Qualcomm Adreno
 X1-85. Browser: headless Edge **157.0.4341.46**, hardware ANGLE/D3D11. No discrete GPU was
 used. These are **local timings, not cloud performance measurements**. A 16-GiB machine
-and Linux/macOS runtime were not tested.
+and macOS runtime were not tested. A separate Ubuntu GitHub-hosted run is recorded below.
 
 The separate documentation run rendered all four diagrams, checked node-label bounds and
 editable-source identities/dimensions, and exercised the research HTML at 1440x1000 and
@@ -153,6 +153,9 @@ case was 3.4 seconds). These are seven bounded sample requests, not a performanc
 or a general model-accuracy score. Some concise answers cite the configured threshold
 set without enumerating every threshold or QC flag; use the deterministic report for
 complete evidence. A broader independent scientific evaluation is still required.
+An independent anonymous MCP initialize request returned **HTTP 401**.
+Rerunning apply reused the seven owned tables and ontology and preserved the published
+agent version; only the explicit publish action replaces that version.
 
 Earlier responses conflated source-system/connection-state or image/snapshot hashes
 and used inappropriate “validated hit metrics” wording. Explicit column descriptions,
@@ -225,11 +228,23 @@ Earlier targeted GitHub reviewed-advisory checks found no active entries for the
 graphs/candidates; normal audit endpoints were unavailable. This is **not a complete
 clean security audit**.
 
-CI is defined with pinned upstream Action commits and now includes research/context,
-knowledge, repository and documentation checks. The new GitHub repository is private;
-remote push and hosted-run evidence are recorded separately from local results.
-Docker execution, Linux/macOS runtime, a separate unauthorized cloud identity and cloud
-review writes remain unverified.
+The source was pushed to the private
+[anuraagr/assayscope-fabric repository](https://github.com/anuraagr/assayscope-fabric).
+The remote inventory contains 158 source/documentation files, eight actual screenshots,
+four SVG diagrams and their editable sources. Configured tenant IDs/account and excluded
+bulk/state paths were checked out of publishable source and reachable main history.
+
+The first real [GitHub Actions run](https://github.com/anuraagr/assayscope-fabric/actions/runs/43500337849)
+passed on **Ubuntu 24.04** in **4m04s** for source commit `8a2d570`.
+It installed the exact dependencies, built the frontend/Functions, ran scientific and
+local API tests, generated research/context/knowledge outputs, completed all browser
+flows with explicitly selected software WebGL, checked documentation and deployment
+guards, and uploaded evidence. The optional public-pack download was not selected.
+This is actual hosted Linux execution, not a Docker or hardware-GPU claim.
+
+Docker execution, macOS, a separate unauthorized cloud identity and cloud review writes
+remain unverified. Hosted model/tenant checks are separate from CI; no cloud credentials
+or deployment secrets were added to GitHub.
 
 ## Repeatable local verification
 

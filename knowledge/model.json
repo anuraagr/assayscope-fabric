@@ -2,7 +2,7 @@
   "name": "AssayScope research context",
   "status": "Domain intent for the deployed, generated TMDL ontology; this JSON is not itself a Fabric API payload",
   "targetExperience": "Fabric IQ Ontology new TMDL experience",
-  "namespace": "AssayScopeResearch",
+  "namespace": "default",
   "entities": [
     {"name": "Experiment", "sourceTable": "assayscope_knowledge_experiments", "key": ["experiment_id"], "meaning": "Declared research question, assay and synthetic origin"},
     {"name": "Acquisition", "sourceTable": "assayscope_knowledge_runs", "key": ["run_key"], "meaning": "A declared acquisition run, not an independent biological replicate"},
