@@ -3,7 +3,31 @@
 Updated **2026-11-16 UTC**. This record separates local execution, the protected sample
 deployment, the research notebook and the deployed knowledge extension. Configuration, a
 successful build and an enabled feature switch are not substitutes for runtime evidence.
-Tenant coordinates, execution receipts and raw logs stay in ignored environment state.
+Tenant coordinates, cloud execution receipts and tenant-operation logs stay in ignored
+environment state.
+
+## 2026-11-16 public source publication
+
+The owner requested public visibility for
+[anuraagr/assayscope-fabric](https://github.com/anuraagr/assayscope-fabric).
+The laboratory-workflow changes were already pushed; GitHub now reports the repository
+as public. Repository metadata and README retrieval also succeeded without authentication.
+
+Before publication, excluded-path and configured-tenant-identifier checks passed across
+reachable source history. gitleaks reported zero findings in that history and the three
+retained CI artifact bundles/logs, including nested evidence ZIPs. CI artifacts contain
+isolated synthetic test evidence, not tenant data. These checks are bounded evidence,
+not a guarantee that every possible secret or dependency issue has been identified.
+The receipt is `test-results/public-repository-check.json`.
+
+The laboratory-workflow commit `e5bf425` passed
+[Ubuntu Actions](https://github.com/anuraagr/assayscope-fabric/actions/runs/43919840691)
+in **4m41s**, including the 13 original and seven new browser cases with software WebGL.
+Python reported **78 passed / one optional public-data test skipped** on that clean runner;
+the prepared local environment passed all 79 tests. This run did not access the tenant.
+
+Making source public does not publish the protected Fabric application or its data,
+grant tenant permissions, resume capacity, or complete the blocked hosted update below.
 
 ## 2026-11-16 laboratory-workflow update
 

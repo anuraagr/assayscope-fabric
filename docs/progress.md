@@ -59,8 +59,9 @@ exact Rayfin versions. Regression tests cover the ignored-schema defect and acci
 tenant-state inclusion.
 
 Generated data, dependencies, execution outputs and per-tenant state remain ignored.
-A private GitHub repository has been created and populated at `anuraagr/assayscope-fabric`.
-Its first real Ubuntu Actions run passed, including browser and scientific checks.
+The GitHub repository at `anuraagr/assayscope-fabric` was made public on 2026-11-16
+at the owner's request. Anonymous repository and source retrieval were verified.
+The laboratory-workflow update passed Ubuntu Actions, including browser and scientific checks.
 Source publication and hosted-run evidence are tracked separately in verification.
 Application hosting remains protected, not public.
 
@@ -89,7 +90,7 @@ deployment independently of those settings.
 | Real assay adaptation | Requires rights, reviewed metadata, method validation and biological replicate design |
 | Managed ontology and data agent | Deployed and exercised; broader scientific evaluation and separate-user authorization remain independent |
 | External LIMS/ELN | No authorized endpoint or mapping supplied; the example stays unconnected |
-| Public source publication | Repository is private; public visibility was not requested |
+| Public source publication | Completed at the owner's request; tenant application and data access remain protected |
 
 Use the [verification record](verification.md) for exact executed checks, evidence
 locations, measurements and limitations. The [documentation index](index.md) is the
