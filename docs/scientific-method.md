@@ -120,6 +120,41 @@ Public Cell Painting derivatives have a separately disclosed per-source-channel 
 conversion. Public source intensities must not be compared to synthetic ADU or pooled
 with BT474 into a response curve. BT474's stain identities are not inferred from LUT colors.
 
+## In-app descriptive research tools
+
+Study overview and Run comparison use actual adapter analyses for each acquisition;
+Fabric obtains those values from the same authorized analytical SQL path as the original
+response view. The catalog's included vehicle values must agree with the reported
+denominator before descriptive control dispersion is displayed.
+
+Control CV is `100 x sample SD / arithmetic mean` for included vehicle integrated
+reporter values, within one run. Fewer than two values or a nonpositive mean yields
+Not estimable. CV is not an assay acceptance criterion. No positive-reference control
+population is supplied, so no Z-prime is calculated.
+
+Run differences are right-minus-left descriptive means in percentage points; each run
+uses its own denominator. Technical n is never pooled between acquisitions. Source
+coordinate matching does not assert paired biological specimens or independent repeats.
+
+QC scenarios are explicit actual recalculations, not new stored measurements. Both
+eligible field membership and vehicle denominator can change. Preview settings do not
+become active until a user applies them to the view, and no saved research decision is
+altered. Choosing a threshold to favor a condition is not validated methodology.
+
+Measurement scatterplots retain excluded values, count missing axis values explicitly,
+and link to their source fields. A missing companion-volume measurement is not zero.
+No inferred correlation, mechanism, viability or efficacy label is added.
+
+Spatial summaries define the outer edge as rows A/H or columns 1/12 and compute medians
+only from included estimable values. Their n and registered/flagged counts are explicit.
+Different compound/dose placements and sparse controls confound position comparisons;
+these summaries are not an edge-effect significance test or batch correction.
+
+Saved-review queues and repeat worksheets reflect human-entered decisions. They do
+not schedule acquisitions, write to an external system or establish scientific validity.
+The exact lab-context join remains fictional export metadata, not a live LIMS/ELN.
+See [integrated workflows](lab-workflows.md) for executable UI paths and export scope.
+
 ## Evaluation and remaining gaps
 
 The final regenerated-pack evaluation yielded nuclear-mask Dice **0.9013**, exact count

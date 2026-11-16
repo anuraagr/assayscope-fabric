@@ -236,6 +236,14 @@ try {
         if ($owner.tenantId -ne $script:Config.tenantId -or $owner.workspaceId -ne $workspaceId -or $owner.environment -ne $script:Config.environment) {
             throw 'Knowledge prefix is owned by a different environment.'
         }
+        $contextFile = Get-Item -LiteralPath (Join-Path $dataDirectory 'context-snapshot.json')
+        if ($contextFile.Length -gt 128KB -or $contextFile.Attributes -band [IO.FileAttributes]::ReparsePoint) {
+            throw 'The validated context snapshot is linked or exceeds its bound.'
+        }
+        $contextResult = Send-DemoFile $contextFile $dataDirectory "$base/$prefix/knowledge" $headers $script:State.knowledgeUploaded
+        if ($contextResult.failure) { throw $contextResult.failure }
+        $script:State.knowledgeUploaded[$contextResult.relative] = $contextResult.hash
+        Save-State
         foreach ($table in $script:KnowledgeTables) {
             if ($table.file -ne "$($table.table).parquet" -or $table.rows -lt 1 -or $table.rows -gt 10000) { throw 'Invalid knowledge upload manifest.' }
             $file = Get-Item -LiteralPath (Join-Path $dataDirectory $table.file)

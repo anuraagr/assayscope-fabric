@@ -119,6 +119,14 @@ Test-Guard 'Wrong account stops before token acquisition' {
     Assert-Throws { Assert-DemoAzContext; Get-DemoToken 'https://api.fabric.microsoft.com' } 'differs from'
     Assert-True ($script:AzCalls.Count -eq 1) 'A token was requested after context mismatch.'
 }
+Test-Guard 'Non-JSON CLI output fails explicitly without printing token responses' {
+    function az { $global:LASTEXITCODE = 0; 'Not a JSON result: opaque-token-value' }
+    $output = & {
+        Assert-Throws { Get-DemoToken 'https://api.fabric.microsoft.com' } 'did not return valid JSON'
+    } 6>&1 | Out-String
+    Assert-True ($output -notmatch 'opaque-token-value') 'Unparsed token output was disclosed.'
+    Assert-Throws { Assert-DemoAzContext } 'did not return valid JSON'
+}
 Test-Guard 'Missing token fails explicitly' {
     $script:AzResponse.accessToken = ''
     Assert-Throws { Get-DemoToken 'https://api.fabric.microsoft.com' } 'usable access token'

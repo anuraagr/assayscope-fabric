@@ -169,6 +169,9 @@ def prepare(directory, snapshot_path, output):
         })
     (output / "tables.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     (output / "expected.json").write_text(json.dumps(tables, allow_nan=False) + "\n", encoding="utf-8")
+    (output / "context-snapshot.json").write_text(
+        json.dumps(snapshot, ensure_ascii=True, indent=2, allow_nan=False) + "\n", encoding="utf-8"
+    )
     return manifest
 
 

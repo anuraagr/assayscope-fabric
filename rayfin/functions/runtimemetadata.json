@@ -19,6 +19,23 @@
       ]
     },
     {
+      "functionName": "labContext",
+      "delegateParameters": [
+        {
+          "name": "ctx",
+          "type": "RayfinContext<AppSchema, AudienceType.Sql | AudienceType.Storage>",
+          "optional": false,
+          "hasDefault": false,
+          "position": 0,
+          "isFabricParameter": false
+        }
+      ],
+      "contextAudiences": [
+        "Sql",
+        "Storage"
+      ]
+    },
+    {
       "functionName": "imageFrame",
       "delegateParameters": [
         {

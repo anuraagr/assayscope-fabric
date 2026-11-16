@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import schema from '../contracts/catalog.schema.json';
 import type { Asset, Catalog } from './catalog.generated';
 import type { Analysis, AnalysisOptions, ExportOptions, Frame, PublicIndex, Review, ReviewInput } from './domain';
+import { readReviews } from './lab-context';
 
 const ajv = new Ajv({ strict: false });
 addFormats(ajv);
@@ -33,6 +34,8 @@ export interface DataAdapter {
   frame(asset: Asset, time: number, signal?: AbortSignal): Promise<Uint8Array>;
   labels(asset: Asset, time: number, signal?: AbortSignal): Promise<Uint8Array>;
   review(well: string, signal?: AbortSignal): Promise<Review | null>;
+  reviews(signal?: AbortSignal): Promise<Review[]>;
+  labContext(signal?: AbortSignal): Promise<unknown>;
   saveReview(well: string, review: ReviewInput): Promise<Review>;
   export(options: ExportOptions): Promise<Blob>;
   reset(): Promise<void>;
@@ -88,6 +91,8 @@ export const localAdapter: DataAdapter = {
     return bytes;
   },
   async review(well, signal) { return (await checkedFetch(`/api/reviews/${well}`, { signal })).json(); },
+  async reviews(signal) { return readReviews(await (await checkedFetch('/api/reviews', { signal })).json()); },
+  async labContext(signal) { return (await checkedFetch('/api/lab-context', { signal })).json(); },
   async saveReview(well, review) {
     return (await checkedFetch(`/api/reviews/${well}`, { ...jsonRequest(review), method: 'PUT' })).json();
   },

@@ -121,3 +121,43 @@ def test_reset_is_scoped_and_missing_cloud_never_connects(api):
     assert (root / "core" / "catalog.json").read_bytes() == source
     assert client.get("/api/fabric/status").status_code == 503
     assert client.get("/api/public").json()["available"] is False
+
+
+def test_review_queue_returns_only_registered_latest_decisions(api):
+    from jsonschema import validate
+
+    client, root = api
+    assert client.get("/api/reviews").json() == []
+    saved = client.put("/api/reviews/run1-F11", json={
+        "state": "Repeat acquisition", "rationale": "Inspect focus.", "version": 0,
+    }).json()
+    client.put("/api/reviews/run1-F11", json={
+        "state": "Investigate", "rationale": "Review acquisition settings first.",
+        "version": saved["version"],
+    }).raise_for_status()
+    from assayscope.store import ReviewStore
+    ReviewStore(root / "reviews.sqlite3").save(
+        "unrelated-private-field", "Investigate", "Outside this study", "", 0
+    )
+    rows = client.get("/api/reviews").json()
+    validate(rows, json.loads((ROOT / "contracts" / "reviews.schema.json").read_text()))
+    assert len(rows) == 1 and rows[0]["version"] == 2 and rows[0]["state"] == "Investigate"
+    with TestClient(create_app(root)) as restarted:
+        assert restarted.get("/api/reviews").json() == rows
+    client.post("/api/reset", json={}).raise_for_status()
+    assert client.get("/api/reviews").json() == []
+    assert ReviewStore(root / "reviews.sqlite3").get("unrelated-private-field") is not None
+
+
+def test_lab_context_is_explicit_example_data_with_exact_source_mapping(api):
+    from jsonschema import validate
+
+    client, _ = api
+    snapshot = client.get("/api/lab-context").json()
+    validate(snapshot, json.loads((ROOT / "contracts" / "lab-context.schema.json").read_text()))
+    assert snapshot["origin"] == "simulated" and snapshot["connectionState"] == "example-only"
+    assert len(snapshot["records"]) == 4
+    f11 = next(row for row in snapshot["records"] if row["wellId"] == "run1-F11")
+    assert f11["externalRecordId"] == "EXAMPLE-002"
+    assert f11["sourceImageId"] == "run1-F11"
+    assert all(".example.invalid/" in row["recordUrl"] for row in snapshot["records"])

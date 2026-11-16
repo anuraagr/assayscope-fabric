@@ -7,6 +7,7 @@ import type { DataAdapter } from './data';
 import type { Analysis, Review } from './domain';
 import { REVIEW_STATES } from './domain';
 import { makeCloudBundle } from './bundle';
+import { readReviews } from './lab-context';
 
 export interface FabricSession {
   adapter: DataAdapter;
@@ -53,7 +54,10 @@ function isReview(input: unknown): input is Review {
 }
 function readReview(raw: unknown) {
   if (!isReview(raw)) throw new Error('Fabric returned an invalid review record.');
-  return raw;
+  return readReviews([{
+    well_id: raw.well_id, state: raw.state, rationale: raw.rationale, annotation: raw.annotation,
+    updated_at: raw.updated_at, version: raw.version,
+  }])[0];
 }
 function functionJson(value: unknown): unknown {
   // Rayfin 1.36 may already decode a handler's JSON string before returning it.
@@ -77,11 +81,11 @@ function isAnalysis(value: unknown): value is Analysis {
     Array.isArray(value.groups) && value.groups.every(group => record(group) &&
       typeof group.compound === 'string' && finite(group.doseUm) && count(group.n) &&
       strings(group.wellIds) && Array.isArray(group.points) && group.points.every(finite) &&
-      group.points.length === group.n && group.wellIds.length === group.n &&
+      group.points.length === group.n && group.wellIds.length >= group.n &&
       nullableNumber(group.mean) && nullableNumber(group.sd)) &&
     Array.isArray(value.crossRun) && value.crossRun.length > 0 && value.crossRun.every(run => record(run) &&
       typeof run.runId === 'string' && typeof run.instrument === 'string' &&
-      count(run.flagged) && count(run.total) && finite(run.medianFocus));
+      count(run.flagged) && count(run.total) && nullableNumber(run.medianFocus));
 }
 export function readCloudAnalysis(raw: unknown): Analysis {
   const result = functionJson(raw);
@@ -151,6 +155,38 @@ export function createFabricSession(): FabricSession {
         .where({ well_id: { eq: well } }).orderBy({ updated_at: 'desc' }).first(1).execute();
       signal?.throwIfAborted();
       return rows.length ? readReview(rows[0]) : null;
+    },
+    async reviews(signal) {
+      demandSession(); signal?.throwIfAborted();
+      const catalog = await adapter.catalog(signal);
+      const allowed = new Set(catalog.wells.map(well => well.id));
+      const latest = new Map<string, Review>();
+      let cursor: string | undefined;
+      for (let page = 0; page < 20; page++) {
+        demandSession(); signal?.throwIfAborted();
+        let query = client.data.ReviewDecision
+          .select(['id', 'well_id', 'state', 'rationale', 'annotation', 'updated_at', 'version'])
+          .where({ experiment_id: { eq: catalog.experiment.id } })
+          .orderBy({ updated_at: 'desc', id: 'desc' }).first(100);
+        if (cursor) query = query.after(cursor);
+        const result = await query.executePaginated();
+        signal?.throwIfAborted();
+        for (const row of result.items) {
+          const review = readReview(row);
+          if (!allowed.has(review.well_id)) throw new Error('Review inventory contains an unregistered well.');
+          if (!latest.has(review.well_id)) latest.set(review.well_id, review);
+        }
+        if (!result.hasNextPage) return readReviews([...latest.values()].sort((a, b) => a.well_id.localeCompare(b.well_id)));
+        if (!result.endCursor || result.endCursor === cursor) throw new Error('Review pagination did not advance.');
+        cursor = result.endCursor;
+      }
+      throw new Error('Review history exceeds the 2,000-revision inventory bound. The queue is not shown as complete; contact the app owner.');
+    },
+    async labContext(signal) {
+      demandSession(); signal?.throwIfAborted();
+      const result = await client.functions.labContext.invoke(undefined, { timeoutMs: 30000 });
+      signal?.throwIfAborted();
+      return functionJson(result);
     },
     async saveReview(well, review) {
       const user = demandSession();

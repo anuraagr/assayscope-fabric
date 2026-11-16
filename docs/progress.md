@@ -1,8 +1,33 @@
 # Implementation status
 
-Updated 2026-11-13. AssayScope is an independent research-only repository. The protected
+Updated 2026-11-16. AssayScope is an independent research-only repository. The protected
 sample deployment uses its dedicated Fabric workspace and an existing capacity; the
 portable source contains no deployment coordinates or credentials.
+
+## Current laboratory-workflow expansion
+
+The browser now includes Study overview/control readiness, a nine-axis measurement
+explorer, cross-run condition comparison, explicit QC scenario previews/apply, a persisted
+review queue and repeat-acquisition worksheets, exact lab-context inspection, and spatial
+plate QC. These use actual catalog/adapter evidence, not new fictional experiments.
+View links now preserve active surface and bounded QC settings. New tabular exports
+carry scope, original values, source hashes and explicit simulated origin.
+
+Local implementation and browser acceptance passed, including denial/missing-context,
+zero-control, export and review persistence cases. Original values and all source/frame
+hashes are unchanged for 192 fields; processing provenance was regenerated. The API adds
+bounded registered-review inventory and example-context retrieval; cloud code keeps
+caller-scoped permissions and reads context only from its fixed OneLake prefix.
+
+**The live browser update is not deployed yet.** The guarded existing-target check
+matched the configured identity; a separate read confirmed the assigned F4 was `Inactive`.
+Permission to resume chargeable shared capacity was requested; the user was unavailable,
+so no capacity, policy, identity or permissions were changed. Previously deployed
+components remain recorded below as historical verification, not proof of this update.
+See [lab workflows](lab-workflows.md) and [verification](verification.md) for current evidence.
+The source handoff contains 15 actual app screenshots and refreshed workflow diagrams.
+The local preview uses the new implementation; source publication does not update the
+protected Fabric frontend.
 
 ## Delivered
 

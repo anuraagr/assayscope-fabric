@@ -31,6 +31,17 @@ class ReviewStore:
             row = db.execute("SELECT * FROM reviews WHERE well_id=?", (well_id,)).fetchone()
         return dict(row) if row else None
 
+    def list_registered(self, allowed_ids: list[str]) -> list[dict]:
+        if not allowed_ids or len(allowed_ids) > 1000 or len(set(allowed_ids)) != len(allowed_ids):
+            raise ValueError("Review inventory needs 1..1000 unique registered wells.")
+        placeholders = ",".join("?" for _ in allowed_ids)
+        with self.connect() as db:
+            rows = db.execute(
+                f"SELECT * FROM reviews WHERE well_id IN ({placeholders}) ORDER BY well_id",
+                allowed_ids,
+            ).fetchall()
+        return [dict(row) for row in rows]
+
     def save(self, well_id, state, rationale, annotation, version) -> dict:
         if state not in STATES or not rationale.strip():
             raise ValueError("A research review state and rationale are required.")

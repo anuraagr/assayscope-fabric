@@ -21,6 +21,7 @@ regulated workflow. A response here is not evidence of efficacy, safety or mecha
 
 | Your task | Read or run |
 |---|---|
+| Use the expanded in-app lab workflows | [Study, measurements, scenarios, review queue and context](docs/lab-workflows.md) |
 | Follow the complete app, data and deployment story | [Illustrated end-to-end walkthrough](docs/end-to-end.md) |
 | Understand the lab workflow and its limits | [Lab research guide](docs/lab-research-guide.md) |
 | Try the populated workbench | [Local quickstart](#run-locally) |
@@ -39,6 +40,17 @@ teams and platform engineers.
 | Linked treatment/control inspection | Response and technical-well evidence |
 |---|---|
 | ![Actual treatment and vehicle volumes with linked display settings](docs/screenshots/comparison.png) | ![Actual reporter-response view with individual technical-well points](docs/screenshots/response-evidence.png) |
+
+| Study and control review | Persistent review queue |
+|---|---|
+| ![Actual study overview with per-run control coverage and scientific readiness limits](docs/screenshots/study-overview.png) | ![Saved research decisions with traceable repeat-acquisition worksheet export](docs/screenshots/review-queue.png) |
+
+The browser also includes a **measurement scatter/table explorer**, **run comparison**,
+**explicit QC scenario previews**, **source-linked lab context**, and **plate spatial QC**.
+These are integrated views over the same study, with bounded exports and actual local/
+tenant data paths; no additional cloud service is needed.
+The 2026-11-16 feature expansion is locally verified; its update to the protected Fabric
+host is pending because the existing capacity is inactive. See [current status](docs/progress.md).
 
 The [illustrated walkthrough](docs/end-to-end.md) explains what to select, what each
 screen means, how to investigate a QC-confounded field, and how the evidence reaches
@@ -132,6 +144,11 @@ On macOS/Linux replace the Python executable with `.venv/bin/python`.
 | Local reviews across restart; evidence ZIP; state-only deep links; presenter/reset | Implemented and browser-tested |
 | Cell Painting CC0 and BT474 CC BY 4.0 reference packs | Real selected files downloaded, hashed, converted and viewed |
 | Deterministic Guided analysis | Implemented; calculations/records, not generative AI |
+| Study overview / control readiness | Per-run denominator, control CV, design/coverage and explicit missing design elements |
+| Measurement explorer | Nine axes, condition/inclusion/search/range filters, keyboard source navigation and scoped exports |
+| Run comparison / QC scenarios | Separate technical n/SD/denominators; actual candidate analyses and explicit apply-to-view |
+| Review queue / repeat worksheets | Persisted local/caller-scoped records; 50-field selection and human-decision-gated repeat exports |
+| Spatial QC / lab context | Source-linked plate summaries and exact four-record example snapshot; no live LIMS inference |
 | OneLake delivery, five analytical tables and cross-run SQL | Deployed; verified with actual cloud data and Fabric SSO UI |
 | Protected hosting and anonymous Functions denial | Deployed; unauthenticated requests return HTTP 401 |
 | Caller-scoped cloud reviews | Deployed; read path exercised; test-write approval and second-identity checks outstanding |
@@ -293,6 +310,8 @@ npm run lint
 npm test
 npm run build
 npm run repo:check
+npm run test:repository
+npm run functions:types
 pwsh -NoLogo -NoProfile -File scripts\verify_deployment.ps1
 .\.venv\Scripts\python.exe -m pytest
 .\.venv\Scripts\python.exe -m ruff check assayscope research tests scripts

@@ -1,4 +1,5 @@
 import type { Asset, Channel } from './catalog.generated';
+import type { ResearchReview } from './reviews.generated';
 
 export type Mode = 'simulated' | 'public' | 'connected';
 export type View = 'volume' | 'image';
@@ -20,16 +21,13 @@ export interface Analysis {
   normalized: Record<string, number | null>; groups: DoseGroup[];
   formula: string; nDefinition: string; fit: string; thresholds: Thresholds;
   flags: Record<string, string[]>;
-  crossRun: { runId: string; instrument: string; flagged: number; total: number; medianFocus: number }[];
+  crossRun: { runId: string; instrument: string; flagged: number; total: number; medianFocus: number | null }[];
 }
 export const REVIEW_STATES = [
   'Investigate', 'Repeat acquisition', 'Prioritize for confirmatory research',
 ] as const;
 export type ReviewState = typeof REVIEW_STATES[number];
-export interface Review {
-  well_id: string; state: ReviewState; rationale: string; annotation: string;
-  updated_at: string; version: number;
-}
+export type Review = ResearchReview;
 export type ReviewInput = Pick<Review, 'state' | 'rationale' | 'annotation' | 'version'>;
 export type ExportOptions = AnalysisOptions & {
   wellId: string;

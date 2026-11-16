@@ -3,47 +3,21 @@
 import argparse
 import hashlib
 import json
-from datetime import datetime
 from pathlib import Path
-from urllib.parse import urlsplit
 
-from jsonschema import Draft7Validator, FormatChecker
+from assayscope.context import validate_context
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def join_context(report, snapshot):
-    schema = json.loads((ROOT / "contracts" / "lab-context.schema.json").read_text(encoding="utf-8"))
-    Draft7Validator(schema, format_checker=FormatChecker()).validate(snapshot)
     if report.get("origin") != "Simulated screening experiment":
         raise ValueError("This context preview requires the reviewed simulated-assay report.")
-    if snapshot["origin"] != "simulated" or snapshot["connectionState"] != "example-only":
-        raise ValueError("Real external records cannot be attached to a simulated assay.")
     wells = {row["well_id"]: row for row in report["well_evidence"]}
     if len(wells) != len(report["well_evidence"]) or not 1 <= len(wells) <= 10000:
         raise ValueError("Research well identities must be unique and bounded.")
-    exported = datetime.fromisoformat(snapshot["exportedAt"].replace("Z", "+00:00"))
-    linked, identities = {}, set()
-    for record in snapshot["records"]:
-        identity = (snapshot["sourceSystem"], record["externalRecordId"], record["recordVersion"])
-        if identity in identities or record["wellId"] in linked:
-            raise ValueError("Duplicate or ambiguous external-record/well mapping; choose a reviewed snapshot.")
-        identities.add(identity)
-        well = wells.get(record["wellId"])
-        if (well is None or record["experimentId"] != report["experiment_id"]
-                or record["runId"] != well["run_id"]
-                or record["sourceImageId"] != well["source_image_id"]):
-            raise ValueError("External record must match experiment, run, well and source image exactly.")
-        updated = datetime.fromisoformat(record["updatedAt"].replace("Z", "+00:00"))
-        if updated > exported:
-            raise ValueError("An external record cannot be newer than its declared snapshot export.")
-        url = urlsplit(record["recordUrl"])
-        if (url.scheme != "https" or not url.hostname or url.username or url.password
-                or url.port not in (None, 443) or url.query or url.fragment):
-            raise ValueError("External record URLs must be HTTPS without credentials, query or fragment.")
-        if not url.hostname.endswith(".example.invalid"):
-            raise ValueError("Example context must use a reserved example.invalid host, not a real LIMS.")
-        linked[record["wellId"]] = record
+    validate_context(snapshot, report["experiment_id"], wells)
+    linked = {record["wellId"]: record for record in snapshot["records"]}
     results = []
     for well in sorted(report["well_evidence"], key=lambda row: (row["run_id"], row["well_id"])):
         record = linked.get(well["well_id"])

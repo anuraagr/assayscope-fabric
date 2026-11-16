@@ -2,6 +2,7 @@ import { AlertTriangle, Check, ExternalLink, Fingerprint } from 'lucide-react';
 import type { Catalog, Well } from '../catalog.generated';
 import { format } from '../domain';
 import type { Analysis } from '../domain';
+import { SpatialQuality } from './SpatialQuality';
 
 const COLORS: Record<string, string> = { 'Aster-17': '#148a8c', 'Beryl-04': '#7b7dab', 'Cygnus-09': '#b9508d' };
 
@@ -68,6 +69,10 @@ export function QualityPanel({ analysis, catalog, run, onSelect }: {
     <p className="microcopy">Focus = variance of the Laplacian / intensity variance (nuclear channel).
       Saturation = fraction of channel-pixels ≥ 254 ADU. Illumination = coefficient of variation across
       four corner-background patches (structure channel). Thresholds are demo-calibrated, not universal.</p>
+    <SpatialQuality catalog={catalog} analysis={analysis} run={run} onInspect={id => {
+      const well = catalog.wells.find(well => well.id === id);
+      if (well) onSelect(well.well, well.runId);
+    }} />
   </section>;
 }
 

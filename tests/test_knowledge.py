@@ -3,6 +3,7 @@ import copy
 import json
 
 import pyarrow as pa
+import pyarrow.parquet as pq
 import pytest
 
 from assayscope.generator import ROOT, build
@@ -16,6 +17,7 @@ from research.knowledge import (
     data_agent_definition,
     knowledge_tables,
     ontology_definition,
+    prepare,
     stable_id,
     validate_target,
 )
@@ -138,3 +140,18 @@ def test_knowledge_ids_and_example_queries_are_stable_bounded_and_read_only():
         assert "spheroid-screen-001" in row["query"]
         assert "ReviewDecision" not in row["query"]
     assert "LEFT JOIN" in next(q["query"] for q in queries if q["id"] == "flagged-context")
+
+
+def test_preparation_emits_the_validated_bounded_context_snapshot(knowledge, tmp_path):
+    analytical, _, _ = knowledge
+    inputs = tmp_path / "source-tables"
+    inputs.mkdir()
+    for name, rows in analytical.items():
+        pq.write_table(pa.Table.from_pylist(rows), inputs / f"{name}.parquet")
+    snapshot = ROOT / "examples" / "lab-context.example.json"
+    output = tmp_path / "knowledge"
+    prepare(inputs, snapshot, output)
+    prepared = output / "context-snapshot.json"
+    assert prepared.stat().st_size <= 128 * 1024
+    assert json.loads(prepared.read_text()) == json.loads(snapshot.read_text())
+    assert json.loads(prepared.read_text())["connectionState"] == "example-only"

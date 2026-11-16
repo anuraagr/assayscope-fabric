@@ -24,6 +24,8 @@ export const required = [
   'contracts/lab-context.schema.json', 'knowledge/model.json', 'knowledge/data-agent-instructions.md',
   'research/knowledge.py', 'scripts/knowledge.ps1', 'knowledge/query-examples.json',
   'docs/end-to-end.md', 'docs/knowledge-deployment.md',
+  'contracts/reviews.schema.json', 'src/reviews.generated.d.ts', 'assayscope/context.py',
+  'examples/lab-context.example.json', 'docs/lab-workflows.md',
 ];
 
 function walk(root, relative, result) {

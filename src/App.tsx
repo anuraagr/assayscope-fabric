@@ -1,24 +1,36 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { Activity, ArrowRight, BookOpen, Check, ChevronRight, CircleHelp, Download, ExternalLink, Fingerprint,
-  FlaskConical, Grid2X2, Link2, LoaderCircle, LockKeyhole, Moon, PanelLeftOpen, Play, RotateCcw, Sun, X } from 'lucide-react';
+  FlaskConical, Grid2X2, Link2, LoaderCircle, LockKeyhole, Moon, PanelLeftOpen, Play, RotateCcw, Sun, X,
+  ClipboardList, Microscope, ScatterChart, GitCompareArrows, NotebookTabs } from 'lucide-react';
 import type { Catalog } from './catalog.generated';
 import { download, localAdapter } from './data';
 import type { DataAdapter } from './data';
 import { channelDefaults, DEFAULT_QC, format } from './domain';
 import type { Analysis, Mode, PublicIndex, Thresholds } from './domain';
 import { parseState, shareUrl } from './state';
-import type { ViewState } from './state';
+import type { Surface, ViewState } from './state';
 import { Plate } from './components/Plate';
 import { Workbench } from './components/Workbench';
 import { Evidence } from './components/Evidence';
 import { ProvenancePanel, QualityPanel, ResponsePanel } from './components/AnalyticalPanels';
 import type { FabricSession } from './fabric';
 
-type Tab = 'workbench' | 'response' | 'quality' | 'provenance';
+const StudyOverview = lazy(() => import('./components/StudyPanels').then(module => ({ default: module.StudyOverview })));
+const RunComparison = lazy(() => import('./components/StudyPanels').then(module => ({ default: module.RunComparison })));
+const MeasurementExplorer = lazy(() => import('./components/MeasurementExplorer').then(module => ({ default: module.MeasurementExplorer })));
+const ReviewQueue = lazy(() => import('./components/ReviewQueue').then(module => ({ default: module.ReviewQueue })));
+const LabContextPanel = lazy(() => import('./components/LabContextPanel').then(module => ({ default: module.LabContextPanel })));
+
+type Tab = Surface;
 const TAB_ITEMS = [
   { id: 'workbench', title: 'Microscopy workbench', icon: Grid2X2 },
+  { id: 'study', title: 'Study overview', icon: Microscope },
+  { id: 'measurements', title: 'Measurements', icon: ScatterChart },
+  { id: 'runs', title: 'Run comparison', icon: GitCompareArrows },
   { id: 'response', title: 'Response & evidence', icon: Activity },
   { id: 'quality', title: 'Lab quality', icon: FlaskConical },
+  { id: 'reviews', title: 'Review queue', icon: ClipboardList },
+  { id: 'context', title: 'Lab context', icon: NotebookTabs },
   { id: 'provenance', title: 'Provenance', icon: Fingerprint },
 ] as const;
 const TOUR = [
@@ -74,13 +86,14 @@ export default function App() {
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [publicIndex, setPublicIndex] = useState<PublicIndex | null>(null);
   const [studyId, setStudyId] = useState('biad610-bt474');
-  const [tab, setTab] = useState<Tab>('workbench');
-  const [excludeQC, setExcludeQC] = useState(true);
-  const [thresholds, setThresholds] = useState<Thresholds>(DEFAULT_QC);
+  const [tab, setTab] = useState<Tab>(state.surface);
+  const [excludeQC, setExcludeQC] = useState(state.excludeQC);
+  const [thresholds, setThresholds] = useState<Thresholds>(state.thresholds);
   const [collapsed, setCollapsed] = useState(false);
   const [light, setLight] = useState(false);
   const [tour, setTour] = useState<number | null>(null);
   const [resetToken, setResetToken] = useState(0);
+  const [reviewRevision, setReviewRevision] = useState(0);
   const [resetConfirm, setResetConfirm] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -153,10 +166,10 @@ export default function App() {
   useEffect(() => {
     if (!well || publicMode || !asset || !channels.length) return;
     const url = shareUrl(window.location.origin, window.location.pathname, {
-      ...state, channels, time: Math.min(state.time, asset.shape[0] - 1), z: Math.min(state.z, asset.shape[2] - 1),
+      ...state, surface: tab, excludeQC, thresholds, channels, time: Math.min(state.time, asset.shape[0] - 1), z: Math.min(state.z, asset.shape[2] - 1),
     });
     window.history.replaceState(null, '', url);
-  }, [well, publicMode, asset, channels, state]);
+  }, [well, publicMode, asset, channels, state, tab, excludeQC, thresholds]);
   const controlWell = catalog?.wells.find(w => w.runId === state.run && w.well === 'G01');
   const control = asset?.shape[2] && asset.shape[2] > 1 ? controlWell?.volume : controlWell?.image;
   const selectWell = useCallback((selected: string, run?: string) => {
@@ -165,6 +178,14 @@ export default function App() {
       view: found?.volume ? 'volume' : 'image', z: found?.volume ? 32 : 0 });
     setTab('workbench'); setNotice('');
   }, [catalog, state.run, update]);
+  const selectSource = useCallback((id: string, inspect = false) => {
+    const source = catalog?.wells.find(well => well.id === id);
+    if (!source) { setError('Source field is not registered in this study.'); return; }
+    if (inspect) selectWell(source.well, source.runId);
+    else update({ well: source.well, run: source.runId, time: 0,
+      view: source.volume ? 'volume' : 'image', z: source.volume ? 32 : 0 });
+  }, [catalog, selectWell, update]);
+  const inspectSource = useCallback((id: string) => selectSource(id, true), [selectSource]);
   const changeMode = (mode: Mode) => {
     if (tenantBuild && mode !== 'connected') return;
     update({ mode, compare: false, overlay: false, channels: null, time: 0, view: 'volume', z: 17 });
@@ -202,9 +223,9 @@ export default function App() {
     update({ compare: step === 2, overlay: false });
   };
   const shareState = () => {
-    const url = shareUrl(window.location.origin, window.location.pathname, { ...state, channels });
+    const url = shareUrl(window.location.origin, window.location.pathname, { ...state, channels, surface: tab, excludeQC, thresholds });
     setShare(url); window.history.replaceState(null, '', url);
-    setNotice('This link restores a view. It does not grant access or contain credentials.');
+    setNotice('This link restores source, surface, display and QC settings. Temporary filters and queue selections are not shared. It grants no access.');
   };
 
   return <div className="app-shell">
@@ -246,7 +267,7 @@ export default function App() {
       {(error || notice) && <div className={`notice-bar ${error ? 'error' : ''}`} role={error ? 'alert' : 'status'}>
         {error || notice}<button className="icon-button" aria-label="Dismiss message" onClick={() => { setError(''); setNotice(''); }}><X size={14} /></button></div>}
       {share && <div className="share-panel"><label>View link<input aria-label="Shareable view link" readOnly value={share} onFocus={e => e.target.select()} /></label>
-        <small>Only app state is shared. Recipients need this local app or authorized tenant access and the same dataset.</small></div>}
+        <small>Source, surface, display and QC settings only; temporary filters, queue selections and private reviews are not shared. Recipients need authorized access and the same dataset.</small></div>}
       {publicMode ? <main id="main" className="public-layout">
         <aside className="study-panel"><span className="eyebrow">REFERENCE LIBRARY</span><h2>Available datasets</h2>
           <p className="subtle">A cell-painting field and a cell-line-derived spheroid. They are independent studies.</p>
@@ -284,7 +305,8 @@ export default function App() {
               {([['focusMin', 'Minimum focus', 0.001, 1], ['saturationMax', 'Maximum saturated fraction', 0.001, 1],
                 ['illuminationMax', 'Maximum illumination CV', 0.01, 5], ['objectCountMin', 'Minimum nuclear count', 1, 10000]] as const).map(([key, title, step, max]) =>
                 <label key={key}>{title}<input type="number" aria-label={title} min={0} max={max} step={step} value={thresholds[key]}
-                  onChange={e => { const n = Number(e.target.value); if (Number.isFinite(n) && n >= 0 && n <= max) setThresholds(q => ({ ...q, [key]: n })); }} /></label>)}
+                  onChange={e => { const n = Number(e.target.value); if (e.target.value !== '' && Number.isFinite(n) && n >= 0 && n <= max &&
+                    (key !== 'objectCountMin' || Number.isInteger(n))) setThresholds(q => ({ ...q, [key]: n })); }} /></label>)}
               <button className="secondary" onClick={() => setThresholds(DEFAULT_QC)}>Restore thresholds</button><small>Changes recompute inclusion, not original measurements.</small>
             </div></details><span>{analysis ? `${analysis.controlN} vehicle controls included` : 'Recalculating…'}</span></div>
           {tab === 'workbench' && asset && channelInfo && <Workbench
@@ -296,15 +318,28 @@ export default function App() {
             clip={state.clip} onClip={clip => update({ clip })} overlay={state.overlay} onOverlay={overlay => update({ overlay })}
             compare={state.compare} onCompare={compare => update({ compare })} view={state.view} onView={view => update({ view, time: 0 })}
             hasVolume={Boolean(well.volume)} reference={false} resetToken={resetToken} />}
+          <Suspense fallback={<div className="lab-load" role="status">Loading research tools…</div>}>
+          {tab === 'study' && analysis && <StudyOverview adapter={adapter} catalog={catalog} analysis={analysis}
+            options={options} onInspect={inspectSource} />}
+          {tab === 'measurements' && analysis && <MeasurementExplorer catalog={catalog} analysis={analysis} options={options}
+            connected={adapter.kind === 'fabric'} selected={well} onInspect={inspectSource} />}
+          {tab === 'runs' && analysis && <RunComparison adapter={adapter} catalog={catalog} analysis={analysis} options={options}
+            onInspect={inspectSource} onApply={(qc, exclusions) => { setThresholds(qc); setExcludeQC(exclusions);
+              setNotice('QC scenario applied to this view only. Original measurements and saved decisions were not changed.'); }} />}
+          {tab === 'reviews' && analysis && <ReviewQueue adapter={adapter} catalog={catalog} analysis={analysis} options={options}
+            revision={reviewRevision + resetToken} selected={well} onInspect={inspectSource} onReview={id => selectSource(id)} />}
+          {tab === 'context' && <LabContextPanel adapter={adapter} catalog={catalog} selected={well} onSelect={id => selectSource(id)} />}
           {tab === 'response' && analysis && <ResponsePanel analysis={analysis} onSelect={selectWell} />}
           {tab === 'quality' && analysis && <QualityPanel analysis={analysis} catalog={catalog} run={state.run} onSelect={selectWell} />}
           {tab === 'provenance' && <ProvenancePanel catalog={catalog} well={well} />}
-          {(tab === 'response' || tab === 'quality') && !analysis && <div className="empty-state" role="status">Recalculating the evidence…</div>}
+          </Suspense>
+          {!['workbench', 'provenance', 'context'].includes(tab) && !analysis && <div className="empty-state" role="status">Recalculating the evidence…</div>}
           {tab === 'workbench' && <div className="takeaway"><span><Check size={17} />INTERPRETATION LIMITS</span>
             <p>{analysis?.flags[well.id]?.length ? 'This acquisition exceeds a configured QC threshold. Review the source images before interpreting the reporter measurement.'
               : 'No configured acquisition threshold is exceeded. Biological interpretation requires independent replication and orthogonal assays.'}</p></div>}
         </div>
-        <Evidence well={well} analysis={analysis} adapter={adapter} resetToken={resetToken} catalog={catalog} />
+        <Evidence key={`${adapter.cacheNamespace ?? adapter.kind}:${well.id}:${resetToken}`} well={well} analysis={analysis}
+          adapter={adapter} resetToken={resetToken} catalog={catalog} onSaved={() => setReviewRevision(value => value + 1)} />
       </main>}
     </>}
     {tour !== null && <div className="presenter-card" role="region" aria-label="Guided presenter">

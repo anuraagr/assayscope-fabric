@@ -36,6 +36,8 @@ Do not add marketing taglines, slogans or sales language.
    Do not present local persistence as enterprise authentication.
 8. The catalog schema is the shared boundary. Edit contracts/catalog.schema.json and run
    `npm run contracts`; do not hand-edit src/catalog.generated.d.ts.
+   Review inventory and lab context also use shared JSON Schemas/generated declarations.
+   Run `npm run functions:types` for the pinned, local-only Functions type/runtime generator.
 9. All Rayfin packages stay at exactly 1.36.2. Read current official agent rules before
    changing SDK calls: https://rayfin.ai/docs/reference/agent-rules.md.
    Use TC39 decorators, explicit permissions, bounded text and protected static hosting.

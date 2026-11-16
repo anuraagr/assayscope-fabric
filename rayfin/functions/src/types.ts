@@ -21,6 +21,10 @@ export type AppFunctionsSchema = {
     input: Record<string, never>;
     output: string;
   };
+  labContext: {
+    input: Record<string, never>;
+    output: string;
+  };
   imageFrame: {
     input: { assetId: string; time: number; labels: boolean };
     output: string;

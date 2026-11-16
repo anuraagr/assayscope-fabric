@@ -8,6 +8,10 @@ The public reference studies shown later are real, independently attributed data
 The pictures below are actual local application captures. They do not imply that
 Docker, a different tenant or a different identity was tested.
 
+The [integrated lab-workflow guide](lab-workflows.md) extends this path with the in-app
+study/control overview, measurement explorer, run comparison and QC scenario tools,
+saved-review queue, repeat worksheets, spatial diagnostics and exact lab-context view.
+
 ## 1. Start with the study, not a chart
 
 Follow the [native quickstart](../README.md#native-development) or open your authorized

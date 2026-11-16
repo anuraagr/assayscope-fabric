@@ -13,9 +13,11 @@ import numpy as np
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
+from jsonschema import ValidationError
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .analysis import QCThresholds, qc_flags, summarize
+from .context import validate_context
 from .export import evidence_bundle
 from .generator import ROOT, build
 from .store import ReviewConflict, ReviewStore
@@ -195,6 +197,24 @@ def create_app(data_dir: Path | None = None) -> FastAPI:
     def get_review(well_id: str):
         get_well(well_id)
         return store.get(well_id)
+
+    @app.get("/api/reviews")
+    def list_reviews():
+        return store.list_registered([well["id"] for well in catalog["wells"]])
+
+    @app.get("/api/lab-context")
+    def lab_context():
+        path = ROOT / "examples" / "lab-context.example.json"
+        if not path.is_file() or path.is_symlink() or path.stat().st_size > 128 * 1024:
+            raise HTTPException(503, "The bounded example context snapshot is unavailable. No external connection or replacement data was used.")
+        try:
+            snapshot = json.loads(path.read_text(encoding="utf-8"))
+            return validate_context(snapshot, catalog["experiment"]["id"], {
+                well["id"]: {"run_id": well["runId"], "source_image_id": well["image"]["id"]}
+                for well in catalog["wells"]
+            })
+        except (ValueError, ValidationError) as exc:
+            raise HTTPException(409, f"Lab context validation failed: {exc.message if isinstance(exc, ValidationError) else str(exc)}") from exc
 
     @app.put("/api/reviews/{well_id}")
     def save_review(well_id: str, review: ReviewRequest):

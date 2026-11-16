@@ -23,6 +23,11 @@ import numpy as np
 from PIL import Image
 from playwright.sync_api import expect, sync_playwright
 
+if __package__:
+    from .lab_browser_flows import verify_lab_flows
+else:
+    from lab_browser_flows import verify_lab_flows
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -116,6 +121,10 @@ def main():
             for name in (
                 "requirements.txt", "package-lock.json", "assayscope/assets.py",
                 "src/components/Workbench.tsx", "config/public-sources.json",
+                "src/components/StudyPanels.tsx", "src/components/MeasurementExplorer.tsx",
+                "src/components/ReviewQueue.tsx", "src/components/LabContextPanel.tsx",
+                "src/components/SpatialQuality.tsx", "src/lab.ts", "src/lab-export.ts",
+                "src/fabric.ts", "src/state.ts",
             )
         },
         "gates": [], "errors": [], "measurements": {}, "publicPack": "Not selected",
@@ -284,6 +293,8 @@ def main():
                     assert np.array(Image.open(io.BytesIO(bundle.read("selected-slice.png")))).std() > 5
                 passed(10, "ZIP measurements match the displayed value, with actual image pixels, review and source provenance.")
 
+                results["labWorkflows"] = verify_lab_flows(page, server, screenshots, report_dir)
+
                 page.get_by_role("button", name=re.compile(r"^Well B11,")).click()
                 expect(primary).to_have_attribute("data-ready", "true")
                 set_range(page, "Timepoint", 3)
@@ -292,7 +303,7 @@ def main():
                 page.get_by_role("checkbox", name="Structure channel", exact=True).uncheck()
                 page.get_by_role("button", name="Share view", exact=True).click()
                 link = page.get_by_role("textbox", name="Shareable view link", exact=True).input_value()
-                assert set(parse_qs(urlparse(link).query)) <= {"mode", "well", "run", "time", "z", "clip", "view", "compare", "overlay", "channels"}
+                assert set(parse_qs(urlparse(link).query)) <= {"mode", "well", "run", "time", "z", "clip", "view", "compare", "overlay", "channels", "surface", "excludeQC", "qc"}
                 restored = context.new_page()
                 restored.goto(link, wait_until="networkidle")
                 expect(restored.get_by_test_id("volume-primary")).to_have_attribute("data-frame", "3")
@@ -307,6 +318,7 @@ def main():
                 expect(primary).to_have_attribute("data-frame", "0")
                 expect(page.get_by_role("checkbox", name="Structure channel", exact=True)).to_be_checked()
                 assert page.request.get(server.url + "/api/reviews/run1-F11").json() is None
+                assert page.request.get(server.url + "/api/reviews/run1-F10").json() is None
                 passed(12, "Reset clears only synthetic review state and restores deterministic starting controls.")
 
                 box = primary.bounding_box()

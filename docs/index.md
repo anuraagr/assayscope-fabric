@@ -9,6 +9,10 @@ For a single guided path with actual app pictures, use the
 
 ## For scientists and imaging teams
 
+The [integrated lab-workflow guide](lab-workflows.md) covers the new browser surfaces:
+study/control readiness, measurement exploration, run/QC comparisons, review queues,
+repeat worksheets, spatial QC and exact lab-context inspection.
+
 1. [Lab research guide](lab-research-guide.md): useful questions, supported evidence,
    technical replication, review decisions and evaluation in a real lab.
 2. [Presenter scripts](demo-scripts.md): a five-minute overview and a fifteen-minute

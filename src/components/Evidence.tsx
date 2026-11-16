@@ -5,27 +5,29 @@ import type { DataAdapter } from '../data';
 import { format, REVIEW_STATES } from '../domain';
 import type { Analysis, Review, ReviewState } from '../domain';
 
-export function Evidence({ well, analysis, adapter, resetToken, catalog }: {
-  well: Well; analysis: Analysis | null; adapter: DataAdapter; resetToken: number; catalog: Catalog;
+export function Evidence({ well, analysis, adapter, resetToken, catalog, onSaved }: {
+  well: Well; analysis: Analysis | null; adapter: DataAdapter; resetToken: number; catalog: Catalog; onSaved: () => void;
 }) {
   const [review, setReview] = useState<Review | null>(null);
   const [state, setState] = useState<ReviewState>('Investigate');
   const [rationale, setRationale] = useState('');
   const [annotation, setAnnotation] = useState('');
   const [pending, setPending] = useState(true);
+  const [loaded, setLoaded] = useState(false);
+  const [retry, setRetry] = useState(0);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const [answer, setAnswer] = useState<string | null>(null);
   const [question, setQuestion] = useState('Why was this well flagged?');
   useEffect(() => {
     const controller = new AbortController();
-    setPending(true); setReview(null); setRationale(''); setAnnotation(''); setError(''); setNotice('');
+    setPending(true); setLoaded(false); setReview(null); setRationale(''); setAnnotation(''); setError(''); setNotice('');
     setState('Investigate'); setAnswer(null);
     adapter.review(well.id, controller.signal).then(result => {
       if (controller.signal.aborted) return;
       setReview(result);
       if (result) { setState(result.state); setRationale(result.rationale); setAnnotation(result.annotation); }
-      setPending(false);
+      setPending(false); setLoaded(true);
     }).catch((e: unknown) => {
       if (!controller.signal.aborted) {
         setError(e instanceof Error ? e.message : 'Review could not be loaded.');
@@ -33,16 +35,16 @@ export function Evidence({ well, analysis, adapter, resetToken, catalog }: {
       }
     });
     return () => controller.abort();
-  }, [adapter, well.id, resetToken]);
+  }, [adapter, well.id, resetToken, retry]);
   const flags = analysis?.flags[well.id] ?? [];
   const metrics = well.measurements;
   const normalized = analysis?.normalized[well.id];
-  const included = !analysis?.excluded.includes(well.id);
+  const included = Boolean(analysis && well.measured && well.measurements && !analysis.excluded.includes(well.id));
   const save = async () => {
     setPending(true); setError(''); setNotice('');
     try {
       const saved = await adapter.saveReview(well.id, { state, rationale, annotation, version: review?.version ?? 0 });
-      setReview(saved); setNotice(adapter.kind === 'local' ? 'Saved on this computer' : 'Saved to your authorized review');
+      setReview(saved); onSaved(); setNotice(adapter.kind === 'local' ? 'Saved on this computer' : 'Saved to your authorized review');
     } catch (e) { setError(e instanceof Error ? e.message : 'Save failed. Your text has not been saved.'); }
     finally { setPending(false); }
   };
@@ -64,10 +66,11 @@ export function Evidence({ well, analysis, adapter, resetToken, catalog }: {
   };
   return <aside className="evidence-panel" aria-label="Selected well evidence">
     <div className="panel-title"><span>EVIDENCE / {well.well}</span><FileCheck2 size={16} /></div>
-    <div className={`qc-banner ${flags.length ? 'warning' : 'good'}`}>
+    <div className={`qc-banner ${flags.length || !analysis ? 'warning' : 'good'}`}>
       {flags.length ? <AlertTriangle size={17} /> : <Check size={17} />}
-      <div><b>{flags.length ? flags.join(' · ') : 'Within configured QC limits'}</b>
-        <small>{included ? 'Included in the current analysis' : 'Excluded · original data retained'}</small></div>
+      <div><b>{!analysis ? 'Analysis pending' : flags.length ? flags.join(' · ') : 'Within configured QC limits'}</b>
+        <small>{!analysis ? 'Waiting for current inclusion rules' : !well.measured || !well.measurements ? 'Unmeasured' :
+          included ? 'Included in the current analysis' : 'Excluded · original data retained'}</small></div>
     </div>
     <div className="headline-metric"><span className="eyebrow">48 H REPORTER / VEHICLE</span>
       <div><strong data-testid="normalized-value">{format(normalized)}</strong><span>{normalized == null ? '' : '%'}</span></div>
@@ -86,17 +89,18 @@ export function Evidence({ well, analysis, adapter, resetToken, catalog }: {
     </details>
     <section className="review-section">
       <h3><MessageSquareText size={17} />Research review</h3>
-      <label className="field-label">Decision<select aria-label="Research decision" value={state}
+      <label className="field-label">Decision<select aria-label="Research decision" value={state} disabled={pending || !loaded}
         onChange={e => setState(e.target.value as ReviewState)}>
         {REVIEW_STATES.map(s => <option key={s}>{s}</option>)}
       </select></label>
-      <label className="field-label">Rationale<textarea aria-label="Decision rationale" value={rationale}
+      <label className="field-label">Rationale<textarea aria-label="Decision rationale" value={rationale} disabled={pending || !loaded}
         maxLength={4000} onChange={e => setRationale(e.target.value)} placeholder="Record the evidence and reason for this decision" rows={3} /></label>
-      <label className="field-label">Image annotation<textarea aria-label="Image annotation" value={annotation}
+      <label className="field-label">Image annotation<textarea aria-label="Image annotation" value={annotation} disabled={pending || !loaded}
         maxLength={4000} onChange={e => setAnnotation(e.target.value)} placeholder="Record an observation about this image" rows={2} /></label>
-      <button className="primary full" disabled={pending || !rationale.trim()} onClick={save}><Save size={14} />{pending ? 'Loading review…' : 'Save review'}</button>
+      <button className="primary full" disabled={pending || !loaded || !rationale.trim()} onClick={save}><Save size={14} />{pending ? 'Loading review…' : 'Save review'}</button>
       {notice && <p className="success-text" role="status">{notice}</p>}
       {error && <p className="error-text" role="alert">{error}</p>}
+      {!loaded && !pending && <button className="secondary full" onClick={() => setRetry(value => value + 1)}>Retry saved review</button>}
       <small className="storage-note">{adapter.kind === 'local' ? 'Local SQLite · no sign-in · persists across restarts' : 'Fabric · private, caller-scoped review'}</small>
     </section>
     <details className="guided-analysis"><summary>Guided analysis <span>Deterministic</span></summary>

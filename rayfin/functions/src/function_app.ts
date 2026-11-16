@@ -107,6 +107,11 @@ udf.func('catalog', async (ctx: RayfinContext<AppSchema, AudienceType.Storage | 
   return text;
 }, []);
 
+udf.func('labContext', async (ctx: RayfinContext<AppSchema, AudienceType.Storage | AudienceType.Sql>): Promise<string> => {
+  await authorize(ctx);
+  return (await readFile(ctx, 'knowledge/context-snapshot.json', 128 * 1024)).toString('utf8');
+}, []);
+
 udf.func('imageFrame', async (
   assetId: string, time: number, labels: boolean,
   ctx: RayfinContext<AppSchema, AudienceType.Storage | AudienceType.Sql>,

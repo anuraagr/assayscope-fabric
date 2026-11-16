@@ -62,3 +62,15 @@ questionable acquisitions, consistent reusable measurements and less manual asse
 of images/metadata/spreadsheets. These are intended benefits, not measured customer savings.
 No value calculator, avoided-trial estimate or guaranteed R&D outcome is included.
 Actual local loading/interaction timings are reported separately in [verification](verification.md).
+
+## Discovery research: AbbVie relevance
+
+Use the same [integrated lab workflows](lab-workflows.md), without adding a disease,
+drug, biomarker, assay acceptance criterion or customer deployment that was not supplied.
+Show the Study overview's missing biological-replication/positive-control boundaries,
+the measurement explorer's image links, the separate run denominators, and how an
+explicit human review becomes a source-linked repeat worksheet.
+
+This is a neutral discovery-research evaluation, not a claim about AbbVie's internal
+systems, use of this application or validation practices. No customer logo or endorsement
+is used, and a simulated reporter change is not a finding about a real compound.

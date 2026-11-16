@@ -44,7 +44,15 @@ function Invoke-DemoAz {
     if (-not $script:Config.subscriptionId) { throw 'A subscription guard is required.' }
     $output = & az @Arguments --subscription $script:Config.subscriptionId --only-show-errors --output json 2>&1
     if ($LASTEXITCODE -ne 0) { throw "Azure CLI failed: $($output -join ' ')" }
-    return ($output -join "`n") | ConvertFrom-Json -AsHashtable
+    try {
+        return ($output -join "`n") | ConvertFrom-Json -AsHashtable
+    } catch {
+        if ('get-access-token' -notin $Arguments) {
+            $diagnostic = $output -join "`n"
+            Write-DemoLog ("AZURE.OUTPUT | Invalid JSON | " + $diagnostic.Substring(0, [Math]::Min(2048, $diagnostic.Length)))
+        }
+        throw 'Azure CLI did not return valid JSON. No identity, token or deployment success was inferred.'
+    }
 }
 function Assert-DemoAzContext {
     $account = Invoke-DemoAz -Arguments @('account','show')

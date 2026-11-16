@@ -17,6 +17,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY assayscope ./assayscope
 COPY contracts ./contracts
 COPY config ./config
+COPY examples/lab-context.example.json ./examples/lab-context.example.json
 COPY --from=frontend /app/dist ./dist
 RUN groupadd --gid 10001 assayscope && useradd --uid 10001 --gid assayscope --no-create-home assayscope \
     && mkdir /data && chown assayscope:assayscope /data

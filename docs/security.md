@@ -95,6 +95,25 @@ the documented operation ID is polled on the canonical Fabric API.
 
 ## Research notebook and external context
 
+The browser review queue uses the same caller-scoped ReviewDecision entity, not a new
+shared table. It queries only the registered experiment, paginates 100 revisions at a
+time and fails if 2,000 revisions cannot provide a complete inventory. Local inventory
+selects only registered well IDs with parameterized SQLite queries. Denied/partial reads
+are not represented as an empty queue. Repeat worksheets require an explicit saved
+human decision and do not submit an external action.
+
+The lab-context Function reads only `knowledge/context-snapshot.json` under the fixed
+owned experiment prefix, capped at 128 KiB, after the existing authorization check.
+The browser validates the shared schema, exact experiment/run/well/image joins,
+record-version uniqueness, timestamp order, example-only origin and unsigned reserved
+record URLs. It never follows those URLs. Missing/denied cloud context fails visibly
+without using a bundled local fallback. No new caller/agent access permissions were added.
+
+View links now include an allowlisted surface and bounded QC parameters, not filters,
+draft scenarios, selected queue IDs, review text or credentials. Exported tabular
+packets include their scope, source-image hashes and original measurements. HTML is
+escaped and spreadsheet-formula prefixes are neutralized; numeric values are retained.
+
 The notebook needs separate Lakehouse read and execution permissions. App Run/Interact
 does not grant these. It reads bounded analytical rows, validates lineage/QC and does not
 write tables or private reviews. Source deployment stops on external notebook edits,

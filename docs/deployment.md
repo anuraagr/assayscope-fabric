@@ -154,6 +154,16 @@ hide a sync delay. The final deployed query returned all expected rows and match
 
 ## Authenticated image delivery
 
+The expanded lab tools also read saved caller-scoped reviews and a bounded
+`knowledge/context-snapshot.json` through the authenticated `labContext` Function.
+Deploy the Functions/frontend update together, then use the existing guarded knowledge
+apply path to upload the schema-validated example snapshot. Missing context remains an
+explicit error, not a local fallback. No new resource or permission is required.
+
+The source type/runtime files are generated with `npm run functions:types` using the
+installed Rayfin 1.36.2 generator; no provisioning or sign-in occurs during generation.
+The deployment still uses the pinned CLI for runtime service publication.
+
 The default cloud path is a **server-side authenticated Functions proxy** for a bounded
 single frame. It first verifies the caller through a protected Rayfin entity read and
 the app runtime's Run/Interact authorization, then resolves an asset from the registered
@@ -259,8 +269,9 @@ environment-name confirmation. Existing workspace/capacity/items are never delet
 
 Capacity execution, SQL/Functions execution, OneLake storage and ingestion consume the
 existing tenant's resources. Storage persists when compute is not being used; soft-deleted
-items can remain under retention. No model is deployed or called. There are no hard-coded
-prices, free-deployment guarantees or unmeasured deployment-time promises.
+items can remain under retention. The base workbench does not deploy or call a model;
+the separately enabled Fabric data agent uses the tenant-managed generative service.
+There are no hard-coded prices, free-deployment guarantees or unmeasured deployment-time promises.
 
 The [optional research notebook](fabric-research.md) is deployed separately with
 `fabric:research:apply` and executed separately with `fabric:research:run`. It reuses
